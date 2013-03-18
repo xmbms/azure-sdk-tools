@@ -186,14 +186,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         {
             IEnumerable<CloudBlobContainer> containerList = null;
 
-            if (PrefixParameterSet == ParameterSetName)
-            {
-                containerList = ListContainersByPrefix(Prefix);
-            }
-            else
-            {
-                containerList = ListContainersByName(Name);
-            }
+            containerList = ListContainersByName(String.Empty);
 
             IEnumerable<AzureStorageContainer> azureContainers = PackCloudBlobContainerWithAcl(containerList);
             WriteObjectWithStorageContext(azureContainers);

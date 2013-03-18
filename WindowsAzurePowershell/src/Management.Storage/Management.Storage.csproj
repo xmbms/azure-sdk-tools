@@ -81,6 +81,7 @@
     <Compile Include="Blob\Cmdlet\GetAzureStorageBlobContent.cs" />
     <Compile Include="Blob\Cmdlet\GetAzureStorageBlobCopyState.cs" />
     <Compile Include="Blob\Cmdlet\GetAzureStorageContainer.cs" />
+    <Compile Include="Blob\Cmdlet\GetAzureStorageContainerInMasterSlaveMode.cs" />
     <Compile Include="Blob\Cmdlet\NewAzureStorageContainer.cs" />
     <Compile Include="Blob\Cmdlet\RemoveAzureStorageBlob.cs" />
     <Compile Include="Blob\Cmdlet\RemoveAzureStorageContainer.cs" />
@@ -135,6 +136,7 @@
     </None>
     <None Include="MSSharedLibKey.snk" />
     <None Include="packages.config" />
+    <None Include="script\getcontainer.ps1" />
     <None Include="script\initcontianer.ps1" />
   </ItemGroup>
   <ItemGroup>
