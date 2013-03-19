@@ -9,14 +9,14 @@
     using System.Linq;
     using System.Management.Automation;
     using System.Text;
-using System.Threading;
+    using System.Threading;
 
     /// <summary>
     /// List azure storage container
     /// </summary>
-    [Cmdlet(VerbsCommon.Get, "AzureStorageContainerInMasterSlave"),
+    [Cmdlet(VerbsCommon.Get, "AzContainer"),
         OutputType(typeof(AzureStorageContainer))]
-    class GetAzureStorageContainerInMasterSlaveMode : GetAzureStorageContainerCommand
+    public class GetAzureStorageContainerInMasterSlaveMode : GetAzureStorageContainerCommand
     {
         private bool useMultiThread = false;
         private CancellationTokenSource tokenSource;
@@ -90,8 +90,6 @@ using System.Threading;
             jobManager = new JobManager<CloudBlobContainer>(tokenSource.Token, ErrorStream, GetContainerInThreadWorker);
         }
 
-        private int count = 0;
-
         protected bool GetContainerInThreadWorker(CloudBlobContainer container)
         {
             BlobRequestOptions requestOptions = null;
@@ -142,7 +140,7 @@ using System.Threading;
             {
                 GatherStreamToMainThread();
             }
-            while (jobManager.PeriodWaitForComplete());
+            while (!jobManager.PeriodWaitForComplete());
 
             GatherStreamToMainThread();
 

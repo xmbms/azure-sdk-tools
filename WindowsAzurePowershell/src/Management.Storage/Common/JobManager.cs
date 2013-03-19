@@ -54,13 +54,13 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
             int count = ThreadCounter.CurrentCount;
             int workerNumber = ThreadCounter.CurrentCount % ConcurrentWorker.Count;
             ConcurrentWorker[workerNumber].JobList.Enqueue(jobItem);
+            //Console.WriteLine("Dispatch job to thread {0}", workerNumber);
             return workerNumber;
         }
 
         public int InitThreadWorker(Func<T, bool> process)
         {
             int threadCount = Environment.ProcessorCount * AsyncTasksPerCoreMultiplier;
-            threadCount = 1;
             for (int i = 0, count = threadCount; i < count; i++)
             {
                 ThreadCounter.AddCount();
@@ -97,7 +97,9 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
             }
             //Console.WriteLine("Current {0} Thread", ThreadCounter.CurrentCount);
             int millisecondsTimeout = 1000;
-            return ThreadCounter.Wait(millisecondsTimeout, Token);
+            bool quit = ThreadCounter.Wait(millisecondsTimeout, Token);
+            //Console.WriteLine("Could Quit : {0}", quit);
+            return quit;
         }
 
         public void Abort()

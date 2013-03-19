@@ -90,7 +90,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
 
         public virtual void Run(object data)
         {
-            Console.WriteLine("Thread {0} running", ThreadId);
+            //Console.WriteLine("Thread {0} running", ThreadId);
 
             try
             {
@@ -151,19 +151,19 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
                             {
                                 remainedJobList.RemoveAt(processPointer);
                             }
-                            Console.WriteLine("Job finished");
+                            //Console.WriteLine("Job finished");
                         }
                         else
                         {
                             if (dequeueSuccessed)
                             {
-                                Console.WriteLine("Added to remained job");
+                                //Console.WriteLine("Added to remained job");
                                 remainedJobList.Add(jobItem);
                             }
                             else
                             {
                                 processPointer++;
-                                Console.WriteLine("Process next job");
+                                //Console.WriteLine("Process next job");
                             }
                         }
                     }
@@ -171,7 +171,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
             }
             finally
             {
-                Console.WriteLine("Thread {0} quit", ThreadId);
+                //Console.WriteLine("Thread {0} quit", ThreadId);
                 ThreadCounter.Signal();
             }
         }
