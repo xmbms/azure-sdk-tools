@@ -7,6 +7,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Management.Automation;
+    using System.Net;
     using System.Text;
     using System.Threading;
 
@@ -73,6 +74,8 @@
         /// <returns>An enumerable collection of AzureStorageContainer</returns>
         internal void AsyncPackCloudBlobContainerWithAcl(IEnumerable<CloudBlobContainer> containerList)
         {
+            ThreadPool.SetMinThreads(100, 100);
+
             foreach (CloudBlobContainer container in containerList)
             {
                 Interlocked.Increment(ref count);
@@ -85,6 +88,12 @@
                     }, null);
             }
             quit = true;
+        }
+
+        protected override void BeginProcessing()
+        {
+            ConfigureServicePointManager();
+            base.BeginProcessing();
         }
 
         public override void ExecuteCmdlet()
@@ -105,8 +114,20 @@
                 Thread.Sleep(1000);
             }
             while (!quit || count != 0);
+            
+            GatherStreamToMainThread();
 
             base.EndProcessing();
+        }
+
+        /// <summary>
+        /// Configure Service Point
+        /// </summary>
+        private void ConfigureServicePointManager()
+        {
+            ServicePointManager.DefaultConnectionLimit = 100;
+            ServicePointManager.Expect100Continue = false;
+            ServicePointManager.UseNagleAlgorithm = true;
         }
 
         protected void GatherStreamToMainThread()

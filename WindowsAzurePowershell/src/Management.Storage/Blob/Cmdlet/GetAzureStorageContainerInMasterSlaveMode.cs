@@ -8,13 +8,14 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Management.Automation;
+    using System.Net;
     using System.Text;
     using System.Threading;
 
     /// <summary>
     /// List azure storage container
     /// </summary>
-    [Cmdlet(VerbsCommon.Get, "AzContainer"),
+    [Cmdlet(VerbsCommon.Get, "MsContainer"),
         OutputType(typeof(AzureStorageContainer))]
     public class GetAzureStorageContainerInMasterSlaveMode : GetAzureStorageContainerCommand
     {
@@ -65,6 +66,14 @@
             private set;
         }
 
+
+        [Parameter(HelpMessage="Thread Count")]
+        public int Thread {
+            get { return threadCount; }
+            set { threadCount = value; }
+        }
+        private int threadCount = 0;
+
         /// <summary>
         /// Set up the cmdlet runtime for multi thread
         /// </summary>
@@ -84,10 +93,11 @@
         /// </summary>
         protected override void BeginProcessing()
         {
+            ConfigureServicePointManager();
             base.BeginProcessing();
             tokenSource = new CancellationTokenSource();
             SetupMultiThreadOutputStream();
-            jobManager = new JobManager<CloudBlobContainer>(tokenSource.Token, ErrorStream, GetContainerInThreadWorker);
+            jobManager = new JobManager<CloudBlobContainer>(tokenSource.Token, ErrorStream, GetContainerInThreadWorker, threadCount);
         }
 
         protected bool GetContainerInThreadWorker(CloudBlobContainer container)
@@ -156,6 +166,16 @@
                 VerboseStream.WriteStreamToMainThread(WriteDebugLog);
                 OutputStream.WriteStreamToMainThread(WriteObject);
             }
+        }
+
+        /// <summary>
+        /// Configure Service Point
+        /// </summary>
+        private void ConfigureServicePointManager()
+        {
+            ServicePointManager.DefaultConnectionLimit = 100;
+            ServicePointManager.Expect100Continue = false;
+            ServicePointManager.UseNagleAlgorithm = true;
         }
     }
 }

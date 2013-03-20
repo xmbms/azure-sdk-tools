@@ -34,33 +34,38 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
 
         private CountdownEvent ThreadCounter;
         private bool CouldQuit;
+        private int jobCount = 0;
 
         private JobManager()
         { 
         }
 
-        public JobManager(CancellationToken token, MultiThreadStreamWriter<Exception> errorStream, Func<T, bool> process)
+        public JobManager(CancellationToken token, MultiThreadStreamWriter<Exception> errorStream, Func<T, bool> process, int threadCount)
         {
             ThreadCounter = new CountdownEvent(1);
             CouldQuit = false;
             Token = token;
             ErrorStream = errorStream;
             ConcurrentWorker = new List<ThreadWorker<T>>();
-            InitThreadWorker(process);
+            InitThreadWorker(process, threadCount);
         }
 
         public int DispatchJob(T jobItem)
         {
-            int count = ThreadCounter.CurrentCount;
-            int workerNumber = ThreadCounter.CurrentCount % ConcurrentWorker.Count;
+            int workerNumber = jobCount % ConcurrentWorker.Count;
             ConcurrentWorker[workerNumber].JobList.Enqueue(jobItem);
             //Console.WriteLine("Dispatch job to thread {0}", workerNumber);
+            jobCount++;
             return workerNumber;
         }
 
-        public int InitThreadWorker(Func<T, bool> process)
+        public int InitThreadWorker(Func<T, bool> process, int threadCount)
         {
-            int threadCount = Environment.ProcessorCount * AsyncTasksPerCoreMultiplier;
+            if (threadCount == 0)
+            {
+                threadCount = Environment.ProcessorCount* AsyncTasksPerCoreMultiplier;
+            }
+
             for (int i = 0, count = threadCount; i < count; i++)
             {
                 ThreadCounter.AddCount();

@@ -88,9 +88,14 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
             enableQuit = true;
         }
 
+        private void ThreadLog(string msg)
+        {
+            //Console.WriteLine("Thread {0}:{1}", ThreadId, msg);
+        }
+
         public virtual void Run(object data)
         {
-            //Console.WriteLine("Thread {0} running", ThreadId);
+            ThreadLog("Running");
 
             try
             {
@@ -100,6 +105,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
                 while (!Token.IsCancellationRequested && !forceQuit)
                 {
                     bool dequeueSuccessed = jobList.TryDequeue(out jobItem);
+                    ThreadLog(string.Format("Get job from concurrent queue {0}", dequeueSuccessed));
                     bool finished = true;
                     if (!dequeueSuccessed) //In most case it should be successed except wait for adding task or job done
                     {
@@ -111,6 +117,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
                             }
 
                             jobItem = remainedJobList[processPointer];
+                            ThreadLog("Use remained job");
                         }
                         else
                         {
@@ -125,7 +132,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
                                 //The yiled time slice should be shorter than the time of one single rest call
                                 //so it will be better if there are only few command to do.
                                 Thread.Sleep(yieldTimeSlice);
-                                //Console.WriteLine("Sleep");
+                                ThreadLog("Sleep");
                                 continue;
                             }
                         }
@@ -151,19 +158,19 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
                             {
                                 remainedJobList.RemoveAt(processPointer);
                             }
-                            //Console.WriteLine("Job finished");
+                            ThreadLog("Job finished");
                         }
                         else
                         {
                             if (dequeueSuccessed)
                             {
-                                //Console.WriteLine("Added to remained job");
+                                ThreadLog("Added to remained job");
                                 remainedJobList.Add(jobItem);
                             }
                             else
                             {
                                 processPointer++;
-                                //Console.WriteLine("Process next job");
+                                ThreadLog("Process next job");
                             }
                         }
                     }
@@ -171,7 +178,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
             }
             finally
             {
-                //Console.WriteLine("Thread {0} quit", ThreadId);
+                ThreadLog("Quit");
                 ThreadCounter.Signal();
             }
         }
