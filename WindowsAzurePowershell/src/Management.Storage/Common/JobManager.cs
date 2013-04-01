@@ -49,12 +49,13 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
             InitThreadWorker(process);
         }
 
+        int count = 0;
         public int DispatchJob(T jobItem)
         {
-            int count = ThreadCounter.CurrentCount;
-            int workerNumber = ThreadCounter.CurrentCount % ConcurrentWorker.Count;
+            int workerNumber = count % ConcurrentWorker.Count;
             ConcurrentWorker[workerNumber].JobList.Enqueue(jobItem);
             //Console.WriteLine("Dispatch job to thread {0}", workerNumber);
+            count++;
             return workerNumber;
         }
 

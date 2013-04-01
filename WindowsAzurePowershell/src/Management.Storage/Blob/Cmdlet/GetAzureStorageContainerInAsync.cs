@@ -64,8 +64,8 @@
             ProgressStream = new MultiThreadStreamWriter<ProgressRecord>();
         }
 
-        bool quit = false;
-        int count = 0;
+        protected bool quit = false;
+        protected int count = 0;
         /// <summary>
         /// Pack CloudBlobContainer and it's permission to AzureStorageContainer object
         /// </summary>
