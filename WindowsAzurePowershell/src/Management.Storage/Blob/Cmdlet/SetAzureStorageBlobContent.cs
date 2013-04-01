@@ -179,17 +179,22 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="blob">destination azure blob object</param>
         internal virtual void Upload2Blob(string filePath, ICloudBlob blob)
         {
-            int id = 0;
+            int id = (AvailableTaskId % DefaultDetailRecordCount) + DetailRecordStartIndex;
             string activity = String.Format(Resources.SendAzureBlobActivity, filePath, blob.Name, blob.Container.Name);
             string status = Resources.PrepareUploadingBlob;
             ProgressRecord pr = new ProgressRecord(id, activity, status);
+            DataMovementUserData data = new DataMovementUserData()
+            {
+                Data = blob,
+                Record = pr
+            };
 
             Action<BlobTransferManager> taskAction = delegate(BlobTransferManager transferManager)
             {
-                transferManager.QueueUpload(blob, filePath, OnTaskStart, OnTaskProgress, OnTaskFinish, pr);
+                transferManager.QueueUpload(blob, filePath, OnTaskStart, OnTaskProgress, OnTaskFinish, data);
             };
 
-            StartSyncTaskInTransferManager(taskAction, pr);
+            StartAsyncTaskInTransferManager(taskAction);
         }
 
         /// <summary>
@@ -255,7 +260,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="containerName">container name</param>
         /// <param name="blobName">blob name</param>
         /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
-        internal AzureStorageBlob SetAzureBlobContent(string fileName, string containerName, string blobName)
+        internal bool SetAzureBlobContent(string fileName, string containerName, string blobName)
         {
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
             return SetAzureBlobContent(fileName, container, blobName);
@@ -268,13 +273,13 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="container">destination container</param>
         /// <param name="blobName">blob name</param>
         /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
-        internal AzureStorageBlob SetAzureBlobContent(string fileName, CloudBlobContainer container, string blobName)
+        internal bool SetAzureBlobContent(string fileName, CloudBlobContainer container, string blobName)
         {
             string filePath = GetFullSendFilePath(fileName);
 
             if (string.IsNullOrEmpty(filePath))
             {
-                return null;
+                return false;
             }
 
             ValidatePipelineCloudBlobContainer(container);
@@ -308,13 +313,13 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="blob">destination blob</param>
         /// <param name="isValidContainer">whether the destination container is validated</param>
         /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
-        internal AzureStorageBlob SetAzureBlobContent(string fileName, ICloudBlob blob, bool isValidContainer = false)
+        internal bool SetAzureBlobContent(string fileName, ICloudBlob blob, bool isValidContainer = false)
         {
             string filePath = GetFullSendFilePath(fileName);
 
             if (String.IsNullOrEmpty(filePath))
             {
-                return null;
+                return false;
             }
 
             if (null == blob)
@@ -360,7 +365,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
                 {
                     if (!ConfirmOverwrite(blob.Name))
                     {
-                        return null;
+                        return false;
                     }
                 }
             }
@@ -368,8 +373,6 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
             try
             {
                 Upload2Blob(filePath, blob);
-
-                Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
             }
             catch (Exception e)
             {
@@ -377,7 +380,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
                 throw;
             }
 
-            return new AzureStorageBlob(blob);
+            return true;
         }
 
         //only support the common blob properties for block blob and page blob
@@ -499,7 +502,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// </summary>
         public override void ExecuteCmdlet()
         {
-            AzureStorageBlob blob = null;
+            bool successful = true;
             string containerName = string.Empty;
 
             if (BlobProperties != null)
@@ -510,34 +513,54 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
             switch (ParameterSetName)
             {
                 case ContainerParameterSet:
-                    blob = SetAzureBlobContent(FileName, CloudBlobContainer, BlobName);
+                    successful = SetAzureBlobContent(FileName, CloudBlobContainer, BlobName);
                     containerName = CloudBlobContainer.Name;
                     break;
 
                 case BlobParameterSet:
-                    blob = SetAzureBlobContent(FileName, ICloudBlob);
+                    successful = SetAzureBlobContent(FileName, ICloudBlob);
                     containerName = ICloudBlob.Container.Name;
                     break;
 
                 case ManualParameterSet:
                 default:
-                    blob = SetAzureBlobContent(FileName, ContainerName, BlobName);
+                    successful = SetAzureBlobContent(FileName, ContainerName, BlobName);
                     containerName = ContainerName;
                     break;
             }
 
-            if (blob == null)
+            if (successful)
+            {
+                String result = String.Format(Resources.SendAzureBlobStartSuccessfully, FileName, containerName);
+                WriteVerbose(result);
+            }
+            else
             {
                 String result = String.Format(Resources.SendAzureBlobCancelled, FileName, containerName);
                 WriteObject(result);
             }
-            else
+        }
+
+        /// <summary>
+        /// On Task run successfully
+        /// </summary>
+        /// <param name="data">User data</param>
+        protected override void OnTaskSuccessful(DataMovementUserData data)
+        {
+            ICloudBlob blob = data.Data as ICloudBlob;
+
+            if (blob != null)
             {
+                AccessCondition accessCondition = null;
+                BlobRequestOptions requestOptions = null;
+                Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
+
                 //set the properties and meta
                 SetBlobProperties(blob, BlobProperties);
                 SetBlobMeta(blob, Metadata);
 
-                WriteObjectWithStorageContext(blob);
+                AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
+                OutputStream.WriteStream(azureBlob);
             }
         }
     }

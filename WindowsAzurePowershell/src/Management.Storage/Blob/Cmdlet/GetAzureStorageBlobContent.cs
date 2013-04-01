@@ -129,14 +129,19 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="filePath">Destination file path</param>
         internal virtual void DownloadBlob(ICloudBlob blob, string filePath)
         {
-            int id = 0;
+            int id = (AvailableTaskId % DefaultDetailRecordCount) + DetailRecordStartIndex;
             string activity = String.Format(Resources.ReceiveAzureBlobActivity, blob.Name, filePath);
             string status = Resources.PrepareDownloadingBlob;
             ProgressRecord pr = new ProgressRecord(id, activity, status);
+            DataMovementUserData data = new DataMovementUserData()
+                {
+                    Data = blob,
+                    Record = pr
+                };
 
-            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueDownload(blob, filePath, checkMd5, OnTaskStart, OnTaskProgress, OnTaskFinish, pr);
+            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueDownload(blob, filePath, checkMd5, OnTaskStart, OnTaskProgress, OnTaskFinish, data);
 
-            StartSyncTaskInTransferManager(taskAction, pr);
+            StartAsyncTaskInTransferManager(taskAction);
         }
 
         /// <summary>
@@ -146,7 +151,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="blobName">source blob name</param>
         /// <param name="fileName">file name</param>
         /// <returns>the downloaded AzureStorageBlob object</returns>
-        internal AzureStorageBlob GetBlobContent(string containerName, string blobName, string fileName)
+        internal bool GetBlobContent(string containerName, string blobName, string fileName)
         {
             if (!NameUtil.IsValidBlobName(blobName))
             {
@@ -179,7 +184,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="blobName">source blob name</param>
         /// <param name="fileName">destination file name</param>
         /// <returns>the downloaded AzureStorageBlob object</returns>
-        internal AzureStorageBlob GetBlobContent(CloudBlobContainer container, string blobName, string fileName)
+        internal bool GetBlobContent(CloudBlobContainer container, string blobName, string fileName)
         {
             if (!NameUtil.IsValidBlobName(blobName))
             {
@@ -208,7 +213,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="fileName">destination file path</param>
         /// <param name="isValidBlob">whether the source container validated</param>
         /// <returns>the downloaded AzureStorageBlob object</returns>
-        internal AzureStorageBlob GetBlobContent(ICloudBlob blob, string fileName, bool isValidBlob = false)
+        internal bool GetBlobContent(ICloudBlob blob, string fileName, bool isValidBlob = false)
         {
             if (null == blob)
             {
@@ -219,7 +224,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
             if (IsSnapshot(blob) && ParameterSetName != BlobParameterSet)
             {
                 WriteWarning(String.Format(Resources.SkipDownloadSnapshot, blob.Name, blob.SnapshotTime));
-                return null;
+                return false;
             }
 
             string filePath = GetFullReceiveFilePath(fileName, blob.Name, blob.SnapshotTime);
@@ -229,7 +234,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
                 if (!ConfirmOverwrite(filePath))
                 {
                     WriteWarning(String.Format(Resources.FileAlreadyExists, filePath));
-                    return null;
+                    return false;
                 }
             }
 
@@ -246,14 +251,9 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
                 Directory.CreateDirectory(dirPath);
             }
 
-            AccessCondition accessCondition = null;
-            BlobRequestOptions requestOptions = null;
-
             try
             {
                 DownloadBlob(blob, filePath);
-
-                Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
             }
             catch (Exception e)
             {
@@ -261,7 +261,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
                 throw;
             }
 
-            return new AzureStorageBlob(blob);
+            return true;
         }
 
         /// <summary>
@@ -306,39 +306,59 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public override void ExecuteCmdlet()
         {
-            AzureStorageBlob azureBlob = null;
+            bool successful = true;
             string blobName = string.Empty;
             string containerName = string.Empty;
 
             switch (ParameterSetName)
             {
                 case BlobParameterSet:
-                    azureBlob = GetBlobContent(ICloudBlob, FileName, true);
+                    successful = GetBlobContent(ICloudBlob, FileName, true);
                     blobName = ICloudBlob.Name;
                     containerName = ICloudBlob.Container.Name;
                     break;
 
                 case ContainerParameterSet:
-                    azureBlob = GetBlobContent(CloudBlobContainer, BlobName, FileName);
+                    successful = GetBlobContent(CloudBlobContainer, BlobName, FileName);
                     blobName = BlobName;
                     containerName = CloudBlobContainer.Name;
                     break;
 
                 case ManualParameterSet:
-                    azureBlob = GetBlobContent(ContainerName, BlobName, FileName);
+                    successful = GetBlobContent(ContainerName, BlobName, FileName);
                     blobName = BlobName;
                     containerName = ContainerName;
                     break;
             }
 
-            if (azureBlob == null)
+            if (successful)
             {
-                String result = String.Format(Resources.DownloadBlobCancelled, blobName, containerName);
-                WriteObject(result);
+                String result = String.Format(Resources.BlobTransmitStartSuccessfully, blobName, containerName);
+                WriteVerbose(result);
             }
             else
             {
-                WriteObjectWithStorageContext(azureBlob);
+                String result = String.Format(Resources.DownloadBlobCancelled, blobName, containerName);
+                WriteVerbose(result);
+            }
+        }
+
+        /// <summary>
+        /// On Task run successfully
+        /// </summary>
+        /// <param name="data">User data</param>
+        protected override void OnTaskSuccessful(DataMovementUserData data)
+        {
+            ICloudBlob blob = data.Data as ICloudBlob;
+
+            if (blob != null)
+            {
+                AccessCondition accessCondition = null;
+                BlobRequestOptions requestOptions = null;
+
+                Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
+                AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
+                OutputStream.WriteStream(azureBlob);
             }
         }
     }

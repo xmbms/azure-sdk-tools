@@ -545,4 +545,30 @@ Failed: {2}.</value>
     <value>Fetch Permission for container '{0}' failed. Exception: {1}</value>
     <comment>0 for container name, 1 for error message.</comment>
   </data>
+  <data name="DebugMainThreadWriterThrowException" xml:space="preserve">
+    <value>Main thread writer throw an exception. {0}</value>
+    <comment>0 for error message.</comment>
+  </data>
+  <data name="DebugTryDequeueShouldNeverFail" xml:space="preserve">
+    <value>Try to dequeue an concurrent queue should never fail since we make sure there are messages in this queue.</value>
+  </data>
+  <data name="TransmitActiveSummary" xml:space="preserve">
+    <value>Total:  {0}. Successful: {1}.  Failed: {2}. Active: {3}.</value>
+    <comment>0 for total task count, 1 for successful count, 2 for failed count. 3 for active count.</comment>
+  </data>
+  <data name="TransmitActivity" xml:space="preserve">
+    <value>Transimit Status</value>
+  </data>
+  <data name="BlobTransmitCanceled" xml:space="preserve">
+    <value>Transmission for blob '{0}' in container '{1}' is canceled.</value>
+    <comment>0 for blob name, 1 for container name.</comment>
+  </data>
+  <data name="BlobTransmitStartSuccessfully" xml:space="preserve">
+    <value>Transmission for blob '{0}' in container '{1}' started sucessfully.</value>
+    <comment>0 for blob name, 1 for container name.</comment>
+  </data>
+  <data name="SendAzureBlobStartSuccessfully" xml:space="preserve">
+    <value>Uploading file '{0}' to container '{1}' started successfully.</value>
+    <comment>0 for file name, 1 for container name.</comment>
+  </data>
 </root>
