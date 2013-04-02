@@ -132,6 +132,7 @@
     <Content Include="Resources\Microsoft.WindowsAzure.Management.SqlDatabase.Test.psd1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="app.config" />
     <None Include="MSSharedLibKey.snk" />
     <None Include="TestScripts\CommonFunctions.ps1" />
     <None Include="TestScripts\Database\CreateContext.ps1" />

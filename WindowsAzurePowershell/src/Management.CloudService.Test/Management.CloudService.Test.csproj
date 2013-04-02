@@ -181,6 +181,7 @@
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="app.config" />
     <None Include="MSSharedLibKey.snk" />
     <Content Include="Resources\MyWorkerTemplateFolder\good_bat_file.cmd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

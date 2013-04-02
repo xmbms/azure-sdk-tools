@@ -142,6 +142,7 @@
     <Resource Include="Resources\TestAzure.psd1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <None Include="app.config" />
     <None Include="MSSharedLibKey.snk" />
     <Resource Include="Resources\CloudService\CloudServiceTests.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
