@@ -18,7 +18,6 @@ namespace Microsoft.WindowsAzure.Management.Storage.Extensions
                 {
                     try 
                     {
-                        Thread.Sleep(1000);
                         tcs.SetResult(container.EndGetPermissions(result)); 
                     }
                     catch (Exception e)
