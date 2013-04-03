@@ -1136,7 +1136,7 @@ namespace Microsoft.WindowsAzure.Management.Storage {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Transmit failed. Exception: {0}..
+        ///   Looks up a localized string similar to Transmit failed. Exception: {0}.
         /// </summary>
         internal static string TransmitFailed {
             get {

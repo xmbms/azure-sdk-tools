@@ -150,7 +150,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="containerName">source container name</param>
         /// <param name="blobName">source blob name</param>
         /// <param name="fileName">file name</param>
-        /// <returns>the downloaded AzureStorageBlob object</returns>
+        /// <returns>True if start download successfully, false if the download is canceled.</returns>
         internal bool GetBlobContent(string containerName, string blobName, string fileName)
         {
             if (!NameUtil.IsValidBlobName(blobName))
@@ -183,7 +183,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="container">source container object</param>
         /// <param name="blobName">source blob name</param>
         /// <param name="fileName">destination file name</param>
-        /// <returns>the downloaded AzureStorageBlob object</returns>
+        /// <returns>True if start download successfully, false if the download is canceled.</returns>
         internal bool GetBlobContent(CloudBlobContainer container, string blobName, string fileName)
         {
             if (!NameUtil.IsValidBlobName(blobName))
@@ -193,7 +193,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
 
             string filePath = GetFullReceiveFilePath(fileName, blobName, null);
 
-            ValidatePipelineCloudBlobContainer(container);
+            //ValidatePipelineCloudBlobContainer(container);
             AccessCondition accessCondition = null;
             BlobRequestOptions requestOptions = null;
             ICloudBlob blob = Channel.GetBlobReferenceFromServer(container, blobName, accessCondition, requestOptions, OperationContext);
@@ -212,7 +212,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
         /// <param name="blob">source ICloudBlob object</param>
         /// <param name="fileName">destination file path</param>
         /// <param name="isValidBlob">whether the source container validated</param>
-        /// <returns>the downloaded AzureStorageBlob object</returns>
+        /// <returns>True if start download successfully, false if the download is canceled.</returns>
         internal bool GetBlobContent(ICloudBlob blob, string fileName, bool isValidBlob = false)
         {
             if (null == blob)
@@ -238,10 +238,10 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
                 }
             }
 
-            if (!isValidBlob)
-            {
-                ValidatePipelineICloudBlob(blob);
-            }
+            //if (!isValidBlob)
+            //{
+            //    ValidatePipelineICloudBlob(blob);
+            //}
 
             //create the destination directory if not exists.
             String dirPath = Path.GetDirectoryName(filePath);

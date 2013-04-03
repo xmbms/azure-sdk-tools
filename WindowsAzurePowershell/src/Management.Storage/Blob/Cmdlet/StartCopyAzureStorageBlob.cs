@@ -21,6 +21,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.DataMovement;
     using System;
+    using System.Collections.Generic;
     using System.Management.Automation;
     using System.Security.Permissions;
 
@@ -357,15 +358,20 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
             ValidateContainerName(destContainer.Name);
             ValidateBlobName(destBlobName);
 
-            ICloudBlob destBlob = GetDestinationBlobWithCopyId(destContainer, destBlobName);
-
-            if (destBlob != null && !overwrite && !ConfirmOverwrite(destBlob.Name))
+            Dictionary<string, string> BlobPath = new Dictionary<string, string>()
             {
-                return false;
-            }
+                {"Container", destContainer.Name},
+                {"Blob", destBlobName}
+            };
+
+            DataMovementUserData data = new DataMovementUserData()
+            {
+                Data = BlobPath,
+                Record = null
+            };
 
             //There is no need to use progress record for start-copy
-            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueBlobStartCopy(blob, destContainer, destBlobName, null, OnCopyTaskFinish, null);
+            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueBlobStartCopy(blob, destContainer, destBlobName, null, OnCopyTaskFinish, data);
             StartAsyncTaskInTransferManager(taskAction);
             return true;
         }
@@ -382,15 +388,20 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
             ValidateContainerName(destContainer.Name);
             ValidateBlobName(destBlobName);
 
-            ICloudBlob destBlob = GetDestinationBlobWithCopyId(destContainer, destBlobName);
-
-            if (destBlob != null && !ConfirmOverwrite(destBlob.Name))
+            Dictionary<string, string> BlobPath = new Dictionary<string, string>()
             {
-                return false;
-            }
+                {"Container", destContainer.Name},
+                {"Blob", destBlobName}
+            };
+
+            DataMovementUserData data = new DataMovementUserData()
+            {
+                Data = BlobPath,
+                Record = null
+            };
 
             //There is no need to use progress record for start-copy
-            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueBlobStartCopy(uri, destContainer, destBlobName, null, OnCopyTaskFinish, destBlob);
+            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueBlobStartCopy(uri, destContainer, destBlobName, null, OnCopyTaskFinish, data);
             StartAsyncTaskInTransferManager(taskAction);
             return true;
         }
@@ -412,32 +423,31 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob.Cmdlet
 
         private void OnCopyTaskFinish(object userData, string copyId, Exception e)
         {
-            ICloudBlob destBlob = userData as ICloudBlob;
-            VerboseStream.WriteStream(String.Format(Resources.CopyDestinationBlobPending, destBlob.Name, destBlob.Container.Name, copyId));
-            destBlob = GetDestinationBlobWithCopyId(destBlob.Container, destBlob.Name);
-            OutputStream.WriteStream(destBlob);
-            OnTaskFinish(userData, e);
-        }
+            DataMovementUserData data = userData as DataMovementUserData;
 
-        /// <summary>
-        /// On Task run successfully
-        /// </summary>
-        /// <param name="data">User data</param>
-        protected override void OnTaskSuccessful(DataMovementUserData data)
-        {
-            ICloudBlob blob = data.Data as ICloudBlob;
-
-            if (blob != null)
+            if (data != null)
             {
-                AccessCondition accessCondition = null;
-                BlobRequestOptions options = null;
-                //Make sure we use the dest channel
-                destChannel.FetchBlobAttributes(blob, accessCondition, options, OperationContext);
-                AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
+
+                Dictionary<string, string> destBlobPath = data.Data as Dictionary<string, string>;
+
+                if (destBlobPath != null)
+                {
+                    VerboseStream.WriteStream(String.Format(Resources.CopyDestinationBlobPending, destBlobPath["Blob"], destBlobPath["Container"], copyId));
+                }
+                else
+                {
+                    VerboseStream.WriteStream(copyId);
+                }
+
+                CloudBlobContainer container = destChannel.GetContainerReference(destBlobPath["Container"]);
+                ICloudBlob destBlob = GetDestinationBlobWithCopyId(container, destBlobPath["Blob"]);
+                AzureStorageBlob azureBlob = new AzureStorageBlob(destBlob);
                 //Make sure the dest context is piped out
                 azureBlob.Context = DestContext;
                 OutputStream.WriteStream(azureBlob);
             }
+
+            OnTaskFinish(userData, e);
         }
     }
 }

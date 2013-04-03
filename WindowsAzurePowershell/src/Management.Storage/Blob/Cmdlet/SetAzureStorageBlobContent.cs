@@ -27,6 +27,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
     using System.IO;
     using System.Management.Automation;
     using System.Security.Permissions;
+    using Storage = WindowsAzure.Storage.Blob;
 
     /// <summary>
     /// download blob from azure
@@ -259,7 +260,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="fileName">local file path</param>
         /// <param name="containerName">container name</param>
         /// <param name="blobName">blob name</param>
-        /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
+        /// <returns>True if start upload successfully, false if the upload is canceled.</returns>
         internal bool SetAzureBlobContent(string fileName, string containerName, string blobName)
         {
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
@@ -272,7 +273,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="fileName">local file path</param>
         /// <param name="container">destination container</param>
         /// <param name="blobName">blob name</param>
-        /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
+        /// <returns>True if start upload successfully, false if the upload is canceled.</returns>
         internal bool SetAzureBlobContent(string fileName, CloudBlobContainer container, string blobName)
         {
             string filePath = GetFullSendFilePath(fileName);
@@ -282,14 +283,14 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
                 return false;
             }
 
-            ValidatePipelineCloudBlobContainer(container);
+            //ValidatePipelineCloudBlobContainer(container);
 
             if (string.IsNullOrEmpty(blobName))
             {
                 blobName = GetBlobNameFromRelativeFilePath(filePath);
             }
 
-            ICloudBlob blob = null;
+            ICloudBlob blob = default(ICloudBlob);
 
             switch (CultureInfo.CurrentCulture.TextInfo.ToTitleCase(blobType))
             {
@@ -312,7 +313,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="fileName">local file name</param>
         /// <param name="blob">destination blob</param>
         /// <param name="isValidContainer">whether the destination container is validated</param>
-        /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
+        /// <returns>True if start upload successfully, false if the upload is canceled.</returns>
         internal bool SetAzureBlobContent(string fileName, ICloudBlob blob, bool isValidContainer = false)
         {
             string filePath = GetFullSendFilePath(fileName);
@@ -327,48 +328,50 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
                 throw new ArgumentException(String.Format(Resources.ObjectCannotBeNull, typeof(ICloudBlob).Name));
             }
 
-            if (blob.BlobType == WindowsAzure.Storage.Blob.BlobType.PageBlob)
-            {
-                long fileSize = new FileInfo(filePath).Length;
-                long pageBlobUnit = 512;
-                long remainder = fileSize % pageBlobUnit;
+            //Move to DataMovement
+            //if (blob.BlobType == Storage.BlobType.PageBlob)
+            //{
+            //    long fileSize = new FileInfo(filePath).Length;
+            //    long pageBlobUnit = 512;
+            //    long remainder = fileSize % pageBlobUnit;
 
-                if (remainder != 0)
-                {
-                    //the blob size must be a multiple of 512 bytes.
-                    throw new ArgumentException(String.Format(Resources.InvalidPageBlobSize, filePath, fileSize));
-                }
-            }
+            //    if (remainder != 0)
+            //    {
+            //        //the blob size must be a multiple of 512 bytes.
+            //        throw new ArgumentException(String.Format(Resources.InvalidPageBlobSize, filePath, fileSize));
+            //    }
+            //}
 
             if (!NameUtil.IsValidBlobName(blob.Name))
             {
                 throw new ArgumentException(String.Format(Resources.InvalidBlobName, blob.Name));
             }
 
-            if (!isValidContainer)
-            {
-                ValidatePipelineCloudBlobContainer(blob.Container);
-            }
+            //Move to DataMovement
+            //if (!isValidContainer)
+            //{
+            //    ValidatePipelineCloudBlobContainer(blob.Container);
+            //}
 
-            AccessCondition accessCondition = null;
-            BlobRequestOptions requestOptions = null;
-            ICloudBlob blobRef = Channel.GetBlobReferenceFromServer(blob.Container, blob.Name, accessCondition, requestOptions, OperationContext);
+            //AccessCondition accessCondition = null;
+            //BlobRequestOptions requestOptions = null;
+            //ICloudBlob blobRef = Channel.GetBlobReferenceFromServer(blob.Container, blob.Name, accessCondition, requestOptions, OperationContext);
 
-            if (null != blobRef)
-            {
-                if (blob.BlobType != blobRef.BlobType)
-                {
-                    throw new ArgumentException(String.Format(Resources.BlobTypeMismatch, blobRef.Name, blobRef.BlobType));
-                }
+            //if (null != blobRef)
+            //{
+            //    if (blob.BlobType != blobRef.BlobType)
+            //    {
+            //        throw new ArgumentException(String.Format(Resources.BlobTypeMismatch, blobRef.Name, blobRef.BlobType));
+            //    }
             
-                if (!overwrite)
-                {
-                    if (!ConfirmOverwrite(blob.Name))
-                    {
-                        return false;
-                    }
-                }
-            }
+            //    if (!overwrite)
+            //    {
+            //        if (!ConfirmOverwrite(blob.Name))
+            //        {
+            //            return false;
+            //        }
+            //    }
+            //}
 
             try
             {

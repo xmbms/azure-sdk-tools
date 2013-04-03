@@ -465,7 +465,7 @@
     <comment>0 for blob name, 1 for container name.</comment>
   </data>
   <data name="TransmitFailed" xml:space="preserve">
-    <value>Transmit failed. Exception: {0}.</value>
+    <value>Transmit failed. Exception: {0}</value>
     <comment>0 for error message.</comment>
   </data>
   <data name="TransmitSuccessfully" xml:space="preserve">

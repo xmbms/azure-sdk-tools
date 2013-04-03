@@ -22,6 +22,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
     using System.Management.Automation;
     using ServiceModel = System.ServiceModel;
     using Microsoft.WindowsAzure.Management.Utilities.Common;
+    using System.Threading;
 
     /// <summary>
     /// Base cmdlet for all storage cmdlet that works with cloud
@@ -34,9 +35,12 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
         public virtual AzureStorageContext Context {get; set;}
 
         /// <summary>
-        /// whether stop processing
+        /// Cancellation Token Source
         /// </summary>
-        protected bool ShouldForceQuit = false;
+
+        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+
+        protected CancellationToken CmdletCancellationToken;
 
         /// <summary>
         /// Cmdlet operation context.
@@ -279,6 +283,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
         protected override void BeginProcessing()
         {
             CmdletOperationContext.Init();
+            CmdletCancellationToken = cancellationTokenSource.Token;
             WriteDebugLog(String.Format(Resources.InitOperationContextLog, this.GetType().Name, CmdletOperationContext.ClientRequestId));
             base.BeginProcessing();
         }
@@ -302,8 +307,22 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
         protected override void StopProcessing()
         {
             //ctrl + c and etc
-            ShouldForceQuit = true;
+            cancellationTokenSource.Cancel();
             base.StopProcessing();
+        }
+
+        /// <summary>
+        /// Is the cmdlet operation canceled
+        /// </summary>
+        /// <returns>True if cancel, otherwise false</returns>
+        protected bool IsCanceledOperation()
+        {
+            if (CmdletCancellationToken != null && CmdletCancellationToken.IsCancellationRequested)
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

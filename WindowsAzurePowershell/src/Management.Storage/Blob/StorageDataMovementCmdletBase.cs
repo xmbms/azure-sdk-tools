@@ -177,6 +177,11 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="progress">progress information</param>
         internal virtual void OnTaskStart(object data)
         {
+            if (IsCanceledOperation())
+            {
+                return;
+            }
+
             DataMovementUserData userData = data as DataMovementUserData;
 
             if (null == userData)
@@ -201,6 +206,11 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// <param name="percent">download percent</param>
         internal virtual void OnTaskProgress(object data, double speed, double percent)
         {
+            if (IsCanceledOperation())
+            {
+                return;
+            }
+
             DataMovementUserData userData = data as DataMovementUserData;
 
             if (null == userData)
@@ -224,6 +234,11 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         {
             try
             {
+                if (IsCanceledOperation())
+                {
+                    return;
+                }
+
                 DataMovementUserData userData = data as DataMovementUserData;
 
                 string status = string.Empty;
@@ -243,7 +258,11 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
 
                 if (userData != null && userData.Record != null)
                 {
-                    userData.Record.PercentComplete = 100;
+                    if (e == null)
+                    {
+                        userData.Record.PercentComplete = 100;
+                    }
+
                     userData.Record.StatusDescription = status;
                     ProgressStream.WriteStream(userData.Record);
                 }                
@@ -289,6 +308,8 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// </summary>
         protected override void BeginProcessing()
         {
+            base.BeginProcessing();
+
             if (concurrentTaskCount == 0)
             {
                 concurrentTaskCount = Environment.ProcessorCount * asyncTasksPerCoreMultiplier;
@@ -309,7 +330,8 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
             string summary = String.Format(Resources.TransmitActiveSummary, TotalCount, FinishedCount, FailedCount, initActiveTaskCount);
             summaryRecord = new ProgressRecord(summaryRecordId, Resources.TransmitActivity, summary);
             isEndProcessing = false;
-            base.BeginProcessing();
+
+            CmdletCancellationToken.Register(() => transferManager.CancelWorkAndWaitForCompletion());
         }
 
         /// <summary>
@@ -319,7 +341,8 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         {
             TaskCounter.Signal();
             isEndProcessing = true;
-            int waitTimeout = 1000;
+            //CountDownEvent wait time out and output time interval.
+            int waitTimeout = 1000;//ms
 
             do
             {
@@ -327,14 +350,8 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
                 //So, we'd better output status at first.
                 GatherStreamToMainThread();
                 WriteTransmitSummaryStatus();
-                Console.Write(".");
             }
-            while (!TaskCounter.Wait(waitTimeout) && !ShouldForceQuit);
-
-            if (ShouldForceQuit)
-            {
-                transferManager.CancelWorkAndWaitForCompletion();
-            }
+            while (!TaskCounter.Wait(waitTimeout, CmdletCancellationToken));
 
             GatherStreamToMainThread();
 
@@ -348,6 +365,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         /// </summary>
         protected void GatherStreamToMainThread()
         {
+            WriteTransmitSummaryStatus();
             ProgressStream.WriteStreamToMainThread();
             ErrorStream.WriteStreamToMainThread();
             VerboseStream.WriteStreamToMainThread();
@@ -365,8 +383,6 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
 
             TaskCounter.AddCount();
 
-            WriteTransmitSummaryStatus();
-
             try
             {
                 taskStartAction(transferManager);
@@ -376,6 +392,8 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
                 TaskCounter.Signal();
                 throw;
             }
+
+            GatherStreamToMainThread();
         }
 
         /// <summary>

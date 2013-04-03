@@ -20,6 +20,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Management.Automation;
     using System.Text;
     using System.Threading;
 
@@ -86,6 +87,8 @@ namespace Microsoft.WindowsAzure.Management.Storage.Common
                         catch (Exception e)
                         {
                             Debug.Fail(Resources.DebugMainThreadWriterThrowException, e.Message);
+                            //directly stop the output stream when throw an exception. If so, we could get a better response time for ctrl + c and etc.
+                            break;
                         }
                     }
                 }
