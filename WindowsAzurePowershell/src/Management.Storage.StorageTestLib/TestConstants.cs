@@ -21,6 +21,7 @@ namespace StorageTestLib
         public const string BVT = "bvt";
         public const string Function = "function";
         public const string Scenario = "scenario";
+        public const string GB18030 = "GB18030";
     }
 
     public struct Protocol

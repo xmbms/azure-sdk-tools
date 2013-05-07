@@ -139,6 +139,7 @@
     <Compile Include="Functional\Queue\GetQueue.cs" />
     <Compile Include="Functional\Queue\RemoveQueue.cs" />
     <Compile Include="Functional\StorageContext.cs" />
+    <Compile Include="GB18030Test\BlobContentTest.cs" />
     <Compile Include="Functional\Table\RemoveTable.cs" />
     <Compile Include="PowerShellAgent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

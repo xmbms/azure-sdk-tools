@@ -22,6 +22,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using StorageBlob = Microsoft.WindowsAzure.Storage.Blob;
+using StorageType = Microsoft.WindowsAzure.Storage.Blob.BlobType;
 
 namespace Management.Storage.ScenarioTest.Util
 {
@@ -520,6 +521,20 @@ namespace Management.Storage.ScenarioTest.Util
 
             Test.Info(String.Format("Final Copy status is {0}", destBlob.CopyState.Status));
             return destBlob.CopyState.Status != CopyStatus.Pending;
+        }
+
+        public static ICloudBlob GetBlob(CloudBlobContainer container, string blobName, StorageType blobType)
+        {
+            ICloudBlob blob = null;
+            if (blobType == StorageType.BlockBlob)
+            {
+                blob = container.GetBlockBlobReference(blobName);
+            }
+            else
+            {
+                blob = container.GetPageBlobReference(blobName);
+            }
+            return blob;
         }
     }
 }
