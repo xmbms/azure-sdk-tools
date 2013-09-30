@@ -121,6 +121,14 @@ namespace Microsoft.WindowsAzure.Management.Storage.Test.Common
         }
 
         [TestMethod]
+        public void ValidMetricsTableTest()
+        {
+            string[] metricsTables = {"$MetricsTransactionsBlob", "$MetricsTransactionsTable",
+                                          "$MetricsTransactionsQueue",  "$MetricsCapacityBlob"};
+            NameValidateHelper(metricsTables, true, NameUtil.IsValidTableName);
+        }
+
+        [TestMethod]
         public void IsValidTablePrefixTest()
         {
             string[] positives = {"a", "A", "Ab", "ab", "a99", new String('a', 63) };

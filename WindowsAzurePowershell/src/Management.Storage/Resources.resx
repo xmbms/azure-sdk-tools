@@ -556,4 +556,41 @@ Failed: {2}.</value>
     <value>Invalid storage end point '{0}'.</value>
     <comment>0 for storage end point</comment>
   </data>
+  <data name="InvalidStorageServiceType" xml:space="preserve">
+    <value>Storage service type should be one of Blob,Table,Queue.</value>
+  </data>
+  <data name="InvalidEnumName" xml:space="preserve">
+    <value>Invalid enum name {0}.</value>
+    <comment>0 for enum name</comment>
+  </data>
+  <data name="ExpiryTimeGreatThanStartTime" xml:space="preserve">
+    <value>The expiry time of the specified access policy should be greater than start time. Expiry time : {0}. Start time: {1}.</value>
+    <comment>0 for expiry time.  1 for start time.</comment>
+  </data>
+  <data name="InvalidAccessPermission" xml:space="preserve">
+    <value>Invalid access permission '{0}'.</value>
+    <comment>0 for permission</comment>
+  </data>
+  <data name="InvalidAccessPolicy" xml:space="preserve">
+    <value>Invalid access policy '{0}'.</value>
+    <comment>0 for access policy.</comment>
+  </data>
+  <data name="SasTokenAccountName" xml:space="preserve">
+    <value>[SasToken]</value>
+  </data>
+  <data name="EndpkMustAccomanyEndrk" xml:space="preserve">
+    <value>Endpk must accompany Endrk.</value>
+  </data>
+  <data name="StartpkMustAccomanyStartrk" xml:space="preserve">
+    <value>Startpk must accompany startrk.</value>
+  </data>
+  <data name="BlobIsNotReadable" xml:space="preserve">
+    <value>Can't read the blob properties.</value>
+  </data>
+  <data name="SignedExpiryTimeMustBeOmitted" xml:space="preserve">
+    <value>This expiry time field must be omitted if it has been specified in an associated stored access policy.</value>
+  </data>
+  <data name="SignedPermissionsMustBeOmitted" xml:space="preserve">
+    <value>This permission field must be omitted if it has been specified in an associated stored access policy.</value>
+  </data>
 </root>

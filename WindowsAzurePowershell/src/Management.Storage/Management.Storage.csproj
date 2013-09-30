@@ -85,7 +85,9 @@
     <Compile Include="Blob\Cmdlet\GetAzureStorageBlobContent.cs" />
     <Compile Include="Blob\Cmdlet\GetAzureStorageBlobCopyState.cs" />
     <Compile Include="Blob\Cmdlet\GetAzureStorageContainer.cs" />
+    <Compile Include="Blob\Cmdlet\NewAzureStorageBlobSasToken.cs" />
     <Compile Include="Blob\Cmdlet\NewAzureStorageContainer.cs" />
+    <Compile Include="Blob\Cmdlet\NewAzureStorageContainerSasToken.cs" />
     <Compile Include="Blob\Cmdlet\RemoveAzureStorageBlob.cs" />
     <Compile Include="Blob\Cmdlet\RemoveAzureStorageContainer.cs" />
     <Compile Include="Blob\Cmdlet\SetAzureStorageBlobContent.cs" />
@@ -95,11 +97,16 @@
     <Compile Include="Common\AzureToFileSystemFileNameResolver.cs" />
     <Compile Include="Blob\Cmdlet\StartAzureStorageBlobCopy.cs" />
     <Compile Include="Blob\Cmdlet\StopAzureStorageBlobCopy.cs" />
+    <Compile Include="Common\Cmdlet\GetAzureStorageServiceLogging.cs" />
+    <Compile Include="Common\Cmdlet\GetAzureStorageServiceMetrics.cs" />
+    <Compile Include="Common\Cmdlet\SetAzureStorageServiceLogging.cs" />
+    <Compile Include="Common\Cmdlet\SetAzureStorageServiceMetrics.cs" />
     <Compile Include="Common\CommunicationExceptionUtil.cs" />
     <Compile Include="Common\NameUtil.cs" />
     <Compile Include="Common\Cmdlet\NewAzureStorageContext.cs" />
     <Compile Include="Common\ResourceAlreadyExistException.cs" />
     <Compile Include="Common\ResourceNotFoundException.cs" />
+    <Compile Include="Common\SasTokenHelper.cs" />
     <Compile Include="Common\StorageCloudCmdletBase.cs" />
     <Compile Include="Blob\StorageCloudBlobCmdletBase.cs" />
     <Compile Include="Common\StorageExceptionUtil.cs" />
@@ -119,6 +126,7 @@
     <Compile Include="Model\ResourceModel\AzureStorageContext.cs" />
     <Compile Include="Queue\Cmdlet\GetAzureStorageQueue.cs" />
     <Compile Include="Queue\Cmdlet\NewAzureStorageQueue.cs" />
+    <Compile Include="Queue\Cmdlet\NewAzureStorageQueueSasToken.cs" />
     <Compile Include="Queue\Cmdlet\RemoveAzureStorageQueue.cs" />
     <Compile Include="Queue\StorageQueueBaseCmdlet.cs" />
     <Compile Include="Resources.Designer.cs">
@@ -127,6 +135,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Table\Cmdlet\GetStorageAzureTable.cs" />
+    <Compile Include="Table\Cmdlet\NewAzureStorageTableSasToken.cs" />
     <Compile Include="Table\Cmdlet\NewStorageAzureTable.cs" />
     <Compile Include="Table\Cmdlet\RemoveStorageAzureTable.cs" />
     <Compile Include="Table\StorageCloudTableCmdletBase.cs" />
