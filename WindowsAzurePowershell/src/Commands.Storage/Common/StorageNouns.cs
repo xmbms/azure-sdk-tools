@@ -103,5 +103,65 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// Copy status for azure storage blob
         /// </summary>
         public const string CopyBlobStatus = "AzureStorageBlobCopyState";
+
+        /// <summary>
+        /// Azure storage service metrics
+        /// </summary>
+        public const string StorageServiceMetrics = "AzureStorageServiceMetrics";
+
+        /// <summary>
+        /// Azure storage service logging
+        /// </summary>
+        public const string StorageServiceLogging = "AzureStorageServiceLogging";
+
+        /// <summary>
+        /// Azure storage blob service
+        /// </summary>
+        public const string BlobService = "Blob";
+
+        /// <summary>
+        /// Azure storage table service
+        /// </summary>
+        public const string TableService = "Table";
+
+        /// <summary>
+        /// Azure storage queue service
+        /// </summary>
+        public const string QueueService = "Queue";
+
+        /// <summary>
+        /// Turn off metrics
+        /// </summary>
+        public const string OffMetrics = "None";
+
+        /// <summary>
+        /// Minimal metrics
+        /// </summary>
+        public const string MinimalMetrics = "Service";
+
+        /// <summary>
+        /// Verbose metrics
+        /// </summary>
+        public const string VerboseMetrics = "ServiceAndApi";
+
+        /// <summary>
+        /// Azure storage container sas
+        /// </summary>
+        public const string ContainerSas = "AzureStorageContainerSASToken";
+
+        /// <summary>
+        /// Azure storage blob sas
+        /// </summary>
+        public const string BlobSas = "AzureStorageBlobSASToken";
+
+        /// <summary>
+        /// Azure storage table sas
+        /// </summary>
+        public const string TableSas = "AzureStorageTableSASToken";
+
+        /// <summary>
+        /// Azure storage queue sas
+        /// </summary>
+        public const string QueueSas = "AzureStorageQueueSASToken";
     }
 }

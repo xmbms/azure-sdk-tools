@@ -368,7 +368,22 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             {
                 Upload2Blob(filePath, blob);
 
-                Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
+                try
+                {
+                    Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
+                }
+                catch (StorageException se)
+                {
+                    //Storage credentials only have the write permission, and don't have the read permission.
+                    if (se.IsNotFoundException())
+                    {
+                        WriteVerboseWithTimestamp(Resources.BlobIsNotReadable);
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
             }
             catch (Exception e)
             {

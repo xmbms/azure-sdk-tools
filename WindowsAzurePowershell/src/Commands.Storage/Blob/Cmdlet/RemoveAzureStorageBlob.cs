@@ -173,6 +173,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             {
                 deleteSnapshotsOption = DeleteSnapshotsOption.DeleteSnapshotsOnly;
             }
+            else if (force)
+            {
+                deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
+            }
             else if (HasSnapShot(blob))
             {
                 string message = string.Format(Resources.ConfirmRemoveBlobWithSnapshot, blob.Name, blob.Container.Name);
@@ -209,9 +213,15 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             BlobRequestOptions requestOptions = null;
             ICloudBlob blob = Channel.GetBlobReferenceFromServer(container, blobName, accessCondition, requestOptions, OperationContext);
 
-            if (null == blob)
+            if (null == blob && container.ServiceClient.Credentials.IsSharedKey)
             {
                 throw new ResourceNotFoundException(String.Format(Resources.BlobNotFound, blobName, container.Name));
+            }
+            else
+            {
+                //Construct the blob as CloudBlockBlob no matter what's the real blob type
+                //We can't get the blob type if Credentials only have the delete permission and don't have read permission.
+                blob = container.GetBlockBlobReference(blobName);
             }
 
             return RemoveAzureBlob(blob, true);

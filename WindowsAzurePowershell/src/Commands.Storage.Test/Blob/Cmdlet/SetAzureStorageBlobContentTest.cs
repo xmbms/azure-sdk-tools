@@ -177,9 +177,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         [TestMethod]
         public void SetAzureBlobContentByContainerWithNotExistsContainerTest()
         {
-            string bloburi = "http://127.0.0.1/account/test/blob8";
             string fileName = @"c:\Windows\System32\cmd.exe";
-            CloudPageBlob blob = new CloudPageBlob(new Uri(bloburi));
+            CloudBlobContainer container = BlobMock.GetContainerReference("test");
+            CloudPageBlob blob = container.GetPageBlobReference("blob8");
             AssertThrows<ResourceNotFoundException>(() => command.SetAzureBlobContent(fileName, blob, false),
                 String.Format(Resources.ContainerNotFound, "test"));
         }

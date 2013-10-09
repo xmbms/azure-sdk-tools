@@ -116,8 +116,17 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// <returns>True for valid table name, otherwise return false</returns>
         public static bool IsValidTableName(string tableName)
         {
-            Regex regex = new Regex(@"^[A-Za-z][A-Za-z0-9]{2,62}$");
-            return regex.IsMatch(tableName);
+            //http://msdn.microsoft.com/en-us/library/windowsazure/hh343258.aspx
+            string metricsPrefix = "$Metric";
+            if (!String.IsNullOrEmpty(tableName) && tableName.StartsWith(metricsPrefix))
+            {
+                return true;
+            }
+            else
+            {
+                Regex regex = new Regex(@"^[A-Za-z][A-Za-z0-9]{2,62}$");
+                return regex.IsMatch(tableName);
+            }
         }
 
         /// <summary>

@@ -67,5 +67,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="requestOptions">Table request options</param>
         /// <param name="operationContext">Operation context</param>
         void Delete(CloudTable table, TableRequestOptions requestOptions, OperationContext operationContext);
+
+        /// <summary>
+        /// Get table permission
+        /// </summary>
+        /// <param name="table">Cloud table object</param>
+        /// <param name="requestOptions">Table request options</param>
+        /// <param name="operationContext">Operation context</param>
+        TablePermissions GetTablePermissions(CloudTable table, TableRequestOptions requestOptions, OperationContext operationContext);
     }
 }

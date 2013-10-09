@@ -96,5 +96,16 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         {
             return table.Exists(requestOptions, operationContext);
         }
+
+        /// <summary>
+        /// Get table permission
+        /// </summary>
+        /// <param name="table">Cloud table object</param>
+        /// <param name="requestOptions">Table request options</param>
+        /// <param name="operationContext">Operation context</param>
+        public TablePermissions GetTablePermissions(CloudTable table, TableRequestOptions requestOptions, OperationContext operationContext)
+        {
+            return table.GetPermissions(requestOptions, operationContext);
+        }
     }
 }

@@ -146,5 +146,17 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
             }
             return false;
         }
+
+        /// <summary>
+        /// Get queue permission
+        /// </summary>
+        /// <param name="queue">CloudQueue object</param>
+        /// <param name="options">Queue request options</param>
+        /// <param name="operationContext">Operation context</param>
+        /// <returns>Queue permission</returns>
+        public QueuePermissions GetPermissions(CloudQueue queue, QueueRequestOptions options, OperationContext operationContext)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

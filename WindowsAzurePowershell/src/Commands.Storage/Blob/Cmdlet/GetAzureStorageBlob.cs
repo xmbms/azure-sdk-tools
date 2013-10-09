@@ -118,7 +118,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             BlobRequestOptions requestOptions = null;
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
 
-            if (!skipCheckExists && !Channel.DoesContainerExist(container, requestOptions, OperationContext))
+            if (!skipCheckExists && container.ServiceClient.Credentials.IsSharedKey 
+                && !Channel.DoesContainerExist(container, requestOptions, OperationContext))
             {
                 throw new ArgumentException(String.Format(Resources.ContainerNotFound, containerName));
             }
@@ -235,7 +236,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         }
 
         /// <summary>
-        /// execute command
+        /// Execute command
         /// </summary>
         [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public override void ExecuteCmdlet()

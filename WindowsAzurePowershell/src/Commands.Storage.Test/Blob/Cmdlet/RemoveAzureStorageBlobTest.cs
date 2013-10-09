@@ -49,19 +49,16 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
             AssertThrows<ArgumentException>(()=>command.ValidatePipelineCloudBlobContainer(container), 
                 String.Format(Resources.ObjectCannotBeNull, typeof(CloudBlobContainer).Name));
 
-            string invalidUri = "http://127.0.0.1/account/t";
-            container = new CloudBlobContainer(new Uri(invalidUri));
+            container = BlobMock.GetContainerReference("t");
             AssertThrows<ArgumentException>(() => command.ValidatePipelineCloudBlobContainer(container),
                 String.Format(Resources.InvalidContainerName, "t"));
-            string testUri = "http://127.0.0.1/account/test";
-            container = new CloudBlobContainer(new Uri(testUri));
+            container = BlobMock.GetContainerReference("test");
             AssertThrows<ResourceNotFoundException>(() => command.ValidatePipelineCloudBlobContainer(container),
                 String.Format(Resources.ContainerNotFound, "test"));
 
             AddTestContainers();
             command.ValidatePipelineCloudBlobContainer(container);
-            string textUri = "http://127.0.0.1/account/text";
-            container = new CloudBlobContainer(new Uri(textUri));
+            container = BlobMock.GetContainerReference("text");
             command.ValidatePipelineCloudBlobContainer(container);
         }
 
@@ -97,8 +94,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         [TestMethod]
         public void RemoveAzureBlobByICloudBlobWithNoExistsContainer()
         {
-            string blobUri = "http://127.0.0.1/account/test/blob";
-            CloudBlockBlob blockBlob = new CloudBlockBlob(new Uri(blobUri));
+            CloudBlobContainer container = BlobMock.GetContainerReference("test");
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference("blob");
             command.RemoveAzureBlob(blockBlob, true);
             AssertThrows<ResourceNotFoundException>(() => command.RemoveAzureBlob(blockBlob, false),
                 String.Format(Resources.ContainerNotFound, blockBlob.Container.Name));
@@ -155,9 +152,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         [TestMethod]
         public void RemoveAzureBlobByCloudBlobContainerWithNotExistsContianerTest()
         {
-            string containeruri = "http://127.0.0.1/account/test";
             string blobName = "blob";
-            CloudBlobContainer container = new CloudBlobContainer(new Uri(containeruri));
+            CloudBlobContainer container = BlobMock.GetContainerReference("test");
             AssertThrows<ResourceNotFoundException>(() => command.RemoveAzureBlob(container, blobName),
                 String.Format(Resources.ContainerNotFound, container.Name));
         }
@@ -166,8 +162,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         public void RemoveAzureBlobByCloudBlobContainerWithNotExistsBlobTest()
         {
             AddTestContainers();
-            string containeruri = "http://127.0.0.1/account/test";
-            CloudBlobContainer container = new CloudBlobContainer(new Uri(containeruri));
+            CloudBlobContainer container = BlobMock.GetContainerReference("test");
             string blobName = "test";
             AssertThrows<ResourceNotFoundException>(() => command.RemoveAzureBlob(container, blobName),
                 String.Format(Resources.BlobNotFound, blobName, container.Name));
@@ -177,8 +172,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         public void RemoveAzureBlobByCloudBlobContainerSuccessfullyTest()
         {
             AddTestBlobs();
-            string containeruri = "http://127.0.0.1/account/container1";
-            CloudBlobContainer container = new CloudBlobContainer(new Uri(containeruri));
+            CloudBlobContainer container = BlobMock.GetContainerReference("container1");
             string blobName = "blob0";
             command.RemoveAzureBlob(container, blobName);
             AssertThrows<ResourceNotFoundException>(() => command.RemoveAzureBlob(container, blobName),

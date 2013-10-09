@@ -130,5 +130,16 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         {
             return queue.Exists(requestOptions, operationContext);
         }
+
+        /// <summary>
+        /// Get queue permission
+        /// </summary>
+        /// <param name="options">Queue request options </param>
+        /// <param name="operationContext">Operation context</param>
+        /// <returns>QueuePermissions object</returns>
+        public QueuePermissions GetPermissions(CloudQueue queue, QueueRequestOptions options, OperationContext operationContext)
+        {
+            return queue.GetPermissions(options, operationContext);
+        }
     }
 }

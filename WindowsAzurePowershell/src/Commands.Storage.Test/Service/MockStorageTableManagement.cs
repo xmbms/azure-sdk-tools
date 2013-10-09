@@ -157,5 +157,17 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
 
             return false;
         }
+
+        /// <summary>
+        /// Get table permission
+        /// </summary>
+        /// <param name="table">CloudTable object</param>
+        /// <param name="requestOptions">Table request options</param>
+        /// <param name="operationContext">Operation context</param>
+        /// <returns>Table permission</returns>
+        public TablePermissions GetTablePermissions(CloudTable table, TableRequestOptions requestOptions, OperationContext operationContext)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

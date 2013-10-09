@@ -241,7 +241,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             if (runtimeException != null)
             {
                 FailedCount++;
-                throw runtimeException;
+                RuntimeException rtException = new RuntimeException(runtimeException.Message, runtimeException);
+                throw rtException;
             }
             else
             {

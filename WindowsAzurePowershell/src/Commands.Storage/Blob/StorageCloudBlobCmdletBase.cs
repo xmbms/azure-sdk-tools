@@ -86,7 +86,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage
 
             BlobRequestOptions requestOptions = null;
 
-            if (!Channel.DoesContainerExist(container, requestOptions, OperationContext))
+            if (container.ServiceClient.Credentials.IsSharedKey 
+                && !Channel.DoesContainerExist(container, requestOptions, OperationContext))
             {
                 throw new ResourceNotFoundException(String.Format(Resources.ContainerNotFound, container.Name));
             }

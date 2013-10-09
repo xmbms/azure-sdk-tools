@@ -19,6 +19,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Model.Contract;
+    using Microsoft.WindowsAzure.Storage.Auth;
 
     /// <summary>
     /// Mock blob management
@@ -128,7 +129,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         public CloudBlobContainer GetContainerReference(string name)
         {
             Uri containerUri = new Uri(String.Format("{0}{1}/", BlobEndPoint, name));
-            return new CloudBlobContainer(containerUri);
+            string testName = "testaccount";
+            Guid guid = Guid.NewGuid();
+            string testKey = Convert.ToBase64String(guid.ToByteArray());
+            StorageCredentials credentials = new StorageCredentials(testName, testKey);
+            return new CloudBlobContainer(containerUri, credentials);
         }
 
         /// <summary>

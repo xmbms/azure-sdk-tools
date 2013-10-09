@@ -196,8 +196,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         [TestMethod]
         public void GetBlobContentByICloudBlobWithNotExistsContainerTest()
         {
-            string bloburi = "http://127.0.0.1/account/test/blob0";
-            CloudBlockBlob blockBlob = new CloudBlockBlob(new Uri(bloburi));
+            CloudBlobContainer container = BlobMock.GetContainerReference("test");
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference("blob0");
             string fileName = "abc";
             AssertThrows<ResourceNotFoundException>(() => command.GetBlobContent(blockBlob, fileName, false),
                 String.Format(Resources.ContainerNotFound, "test"));

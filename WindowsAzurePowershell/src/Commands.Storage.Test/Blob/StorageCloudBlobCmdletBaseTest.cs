@@ -92,9 +92,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
 
         [TestMethod]
         public void ValidatePipelineCloudBlobContainerWithNotExistsContainerTest()
-        { 
-            string uri = "http://127.0.0.1/account/test";
-            CloudBlobContainer container = new CloudBlobContainer(new Uri(uri));
+        {
+            CloudBlobContainer container = BlobMock.GetContainerReference("test");
             AssertThrows<ResourceNotFoundException>(() => command.ValidatePipelineCloudBlobContainer(container), String.Format(Resources.ContainerNotFound, container.Name));
         }
 

@@ -78,5 +78,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="options">Queue request options</param>
         /// <param name="operationContext">Operation context</param>
         void DeleteQueue(CloudQueue queue, QueueRequestOptions options, OperationContext operationContext);
+
+        /// <summary>
+        /// Get queue permission
+        /// </summary>
+        /// <param name="options">Queue request options </param>
+        /// <param name="operationContext">Operation context</param>
+        /// <returns>QueuePermissions object</returns>
+        QueuePermissions GetPermissions(CloudQueue queue, QueueRequestOptions options, OperationContext operationContext);
     }
 }

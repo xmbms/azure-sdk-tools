@@ -20,6 +20,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Common.Cmdlet
     using Microsoft.WindowsAzure.Storage.Auth;
     using Storage.Common;
     using Storage.Common.Cmdlet;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Commands.Storage.Model.ResourceModel;
 
     [TestClass]
     public class NewAzureStorageContextTest : StorageTestBase
@@ -101,6 +103,19 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Common.Cmdlet
         public void GetDefaultEndPointDomainTest()
         {
             Assert.AreEqual(command.GetDefaultEndPointDomain(), Resources.DefaultStorageEndPointDomain);
+        }
+
+        [TestMethod]
+        public void GetStorageAccountByConnectionStringAndSasToken()
+        {
+            string sasToken = "?st=2013-09-03T04%3A12%3A15Z&se=2013-09-03T05%3A12%3A15Z&sr=c&sp=r&sig=fN2NPxLK99tR2%2BWnk48L3lMjutEj7nOwBo7MXs2hEV8%3D";
+            string endpoint = "http://storageaccountname.blob.core.windows.net";
+            string connectionString = String.Format("BlobEndpoint={0};QueueEndpoint={0};TableEndpoint={0};SharedAccessSignature={1}", endpoint, sasToken);
+            CloudStorageAccount account = command.GetStorageAccountByConnectionString(connectionString);
+            AzureStorageContext context = new AzureStorageContext(account);
+            connectionString = String.Format("BlobEndpoint={0};SharedAccessSignature={1}", endpoint, sasToken);
+            account = command.GetStorageAccountByConnectionString(connectionString);
+            context = new AzureStorageContext(account);
         }
     }
 }
