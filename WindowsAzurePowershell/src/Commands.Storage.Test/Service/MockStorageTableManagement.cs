@@ -94,7 +94,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         {
             Uri tableUri = new Uri(String.Format("{0}{1}", TableEndPoint, name));
             CloudTableClient tableClient = new CloudTableClient(new Uri(TableEndPoint));
-            return new CloudTable(tableUri, tableClient);
+            return new CloudTable(tableUri);
         }
 
         /// <summary>

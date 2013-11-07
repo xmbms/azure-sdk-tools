@@ -45,8 +45,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Table
             string textUri = "https://127.0.0.1/account/text";
             CloudTableClient tableClient = new CloudTableClient(new Uri(tableClientUri));
             
-            tableMock.tableList.Add(new CloudTable(new Uri(testUri), tableClient));
-            tableMock.tableList.Add(new CloudTable(new Uri(textUri), tableClient));
+            tableMock.tableList.Add(new CloudTable(new Uri(testUri)));
+            tableMock.tableList.Add(new CloudTable(new Uri(textUri)));
         }
     }
 }
