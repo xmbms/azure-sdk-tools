@@ -23,6 +23,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
     using Microsoft.WindowsAzure.Storage.Blob;
     using Model.Contract;
     using Model.ResourceModel;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// List azure storage container
@@ -147,33 +148,37 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// </summary>
         /// <param name="containerList">An enumerable collection of CloudBlobContainer</param>
         /// <returns>An enumerable collection of AzureStorageContainer</returns>
-        internal IEnumerable<AzureStorageContainer> PackCloudBlobContainerWithAcl(IEnumerable<CloudBlobContainer> containerList)
+        internal void PackCloudBlobContainerWithAcl(IEnumerable<CloudBlobContainer> containerList)
         {
             if (null == containerList)
             {
-                yield break;
+                return;
             }
-
-            BlobRequestOptions requestOptions = null;
-            AccessCondition accessCondition = null;
 
             foreach (CloudBlobContainer container in containerList)
             {
-                BlobContainerPermissions permissions = null;
-                
-                try
-                {
-                    permissions = Channel.GetContainerPermissions(container, accessCondition, requestOptions, OperationContext);
-                }
-                catch (Exception e)
-                { 
-                    //Log the error message and continue the process
-                    WriteVerboseWithTimestamp(String.Format(Resources.GetContainerPermissionException, container.Name, e.Message));
-                }
-
-                AzureStorageContainer azureContainer = new AzureStorageContainer(container, permissions);
-                yield return azureContainer;
+                long taskId = GetAvailableTaskId();
+                Task task = GetContainerPermission(container, taskId, Context);
+                RunConcurrentTask(task, taskId);
             }
+        }
+
+        /// <summary>
+        /// Async get container permission
+        /// </summary>
+        /// <param name="container">CloudBlobContainer object</param>
+        /// <param name="taskId">Task id</param>
+        /// <param name="context">Azure storage context</param>
+        /// <returns></returns>
+        internal async Task GetContainerPermission(CloudBlobContainer container, long taskId, AzureStorageContext context)
+        {
+            BlobRequestOptions requestOptions = null;
+            AccessCondition accessCondition = null;
+            BlobContainerPermissions permissions = await Channel.GetContainerPermissionsAsync(container, accessCondition,
+                    requestOptions, OperationContext, CmdletCancellationToken).ConfigureAwait(false);
+            AzureStorageContainer azureContainer = new AzureStorageContainer(container, permissions);
+            azureContainer.Context = context;
+            OutputStream.WriteObject(taskId, azureContainer);
         }
 
         /// <summary>
@@ -193,8 +198,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                 containerList = ListContainersByName(Name);
             }
 
-            IEnumerable<AzureStorageContainer> azureContainers = PackCloudBlobContainerWithAcl(containerList);
-            WriteObjectWithStorageContext(azureContainers);
+            PackCloudBlobContainerWithAcl(containerList);
         }
     }
 }

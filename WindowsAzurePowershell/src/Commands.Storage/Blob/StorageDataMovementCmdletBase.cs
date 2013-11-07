@@ -229,7 +229,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                 }
 
                 Thread.Sleep(interval);
-                if (ShouldForceQuit)
+                if (IsCanceledOperation())
                 {
                     //can't output verbose log for this operation since the Output stream is already stopped.
                     transferManager.CancelWork();

@@ -58,6 +58,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.ResourceModel
         public CloudStorageAccount StorageAccount { get; private set; }
 
         /// <summary>
+        /// Concurrent Task count
+        /// </summary>
+        public int? ConcurrentTaskCount { get; set; }
+
+        /// <summary>
         /// Create a storage context usign cloud storage account
         /// </summary>
         /// <param name="account">cloud storage account</param>

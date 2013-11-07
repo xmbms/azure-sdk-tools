@@ -118,7 +118,7 @@ namespace Microsoft.WindowsAzure.Commands.Test.Utilities.Common
 
         public void WriteProgress(ProgressRecord progressRecord)
         {
-            throw new System.NotImplementedException();
+            // Do nothing
         }
 
         public void WriteVerbose(string text)

@@ -265,7 +265,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                     summaryRecord.StatusDescription = summary;
                     WriteProgress(summaryRecord);
 
-                    for (int i = taskRecordStartIndex; i <= defaultTaskRecordCount && !ShouldForceQuit; i++)
+                    for (int i = taskRecordStartIndex; i <= defaultTaskRecordCount && !IsCanceledOperation(); i++)
                     {
                         ICloudBlob blob = jobList[workerPtr];
                         int recordIndex = workerPtr + taskRecordStartIndex;
@@ -296,7 +296,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                         }
                     }
 
-                    if (ShouldForceQuit)
+                    if (IsCanceledOperation())
                     {
                         break;
                     }

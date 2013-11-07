@@ -22,6 +22,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
     using Microsoft.WindowsAzure.Storage;
     using Model.ResourceModel;
     using ServiceModel = System.ServiceModel;
+    using System.Threading;
+    using System.Net;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Base cmdlet for all storage cmdlet that works with cloud
@@ -34,9 +37,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         public virtual AzureStorageContext Context {get; set;}
 
         /// <summary>
-        /// whether stop processing
+        /// Cancellation Token Source
         /// </summary>
-        protected bool ShouldForceQuit = false;
+        private CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        protected CancellationToken CmdletCancellationToken;
 
         /// <summary>
         /// Cmdlet operation context.
@@ -279,7 +283,14 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         protected override void BeginProcessing()
         {
             CmdletOperationContext.Init();
+            CmdletCancellationToken = cancellationTokenSource.Token;
             WriteDebugLog(String.Format(Resources.InitOperationContextLog, this.GetType().Name, CmdletOperationContext.ClientRequestId));
+
+            if (enableMultiThread)
+            {
+                SetUpMultiThreadEnvironment();
+            }
+
             base.BeginProcessing();
         }
 
@@ -288,11 +299,36 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// </summary>
         protected override void EndProcessing()
         {
+            if (enableMultiThread)
+            {
+                MultiThreadEndProcessing();
+            }
+
             double timespan = CmdletOperationContext.GetRunningMilliseconds();
             string message = string.Format(Resources.EndProcessingLog,
                 this.GetType().Name, CmdletOperationContext.StartedRemoteCallCounter, CmdletOperationContext.FinishedRemoteCallCounter, timespan, CmdletOperationContext.ClientRequestId);
             WriteDebugLog(message);
             base.EndProcessing();
+        }
+
+        /// <summary>
+        /// End processing in multi thread environment
+        /// </summary>
+        internal void MultiThreadEndProcessing()
+        {
+            TaskCounter.Signal();
+
+            do
+            {
+                //When task add to datamovement library, it will immediately start.
+                //So, we'd better output status at first.
+                GatherStreamToMainThread(true);
+            }
+            while (!TaskCounter.Wait(WaitTimeout, CmdletCancellationToken));
+
+            GatherStreamToMainThread(true);
+
+            WriteVerbose(String.Format(Resources.TransferSummary, TaskTotalCount, TaskFinishedCount, TaskFailedCount));
         }
 
         /// <summary>
@@ -302,8 +338,221 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         protected override void StopProcessing()
         {
             //ctrl + c and etc
-            ShouldForceQuit = true;
+            cancellationTokenSource.Cancel();
             base.StopProcessing();
         }
+
+        /// <summary>
+        /// Is the cmdlet operation canceled
+        /// </summary>
+        /// <returns>True if cancel, otherwise false</returns>
+        protected bool IsCanceledOperation()
+        {
+            if (CmdletCancellationToken != null && CmdletCancellationToken.IsCancellationRequested)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        #region multithread related source code
+        /// <summary>
+        /// Enable or disable multithread
+        ///     If the storage cmdlet want to disable the multithread feature,
+        ///     it can disable when construct and beginProcessing
+        /// </summary>
+        protected bool EnableMultiThread
+        {
+            get { return enableMultiThread; }
+            set { enableMultiThread = value; }
+        }
+        private bool enableMultiThread = true;
+
+        /// <summary>
+        /// Summary progress record on multithread task
+        /// </summary>
+        protected ProgressRecord summaryRecord;
+
+        /// <summary>
+        /// MultiThread WriteObject/WriteError in order
+        /// </summary>
+        internal OrderedStreamWriter OutputStream
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// MultiThread WriteVerbose
+        /// </summary>
+        internal UnorderedStreamWriter<string> VerboseStream
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// MultiThread WriteProgress
+        /// </summary>
+        internal UnorderedStreamWriter<ProgressRecord> ProgressStream
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Active task counter
+        /// </summary>
+        protected CountdownEvent TaskCounter;
+
+        //CountDownEvent wait time out and output time interval.
+        protected const int WaitTimeout = 1000;//ms
+
+        /// <summary>
+        /// Task number counter
+        ///     The following counter should be used with Interlocked
+        /// </summary>
+        protected long TaskTotalCount = 0;
+        protected long TaskFailedCount = 0;
+        protected long TaskFinishedCount = 0;
+
+        /// <summary>
+        /// Get available task id
+        ///     thread unsafe since it should only run in main thread
+        /// </summary>
+        protected long GetAvailableTaskId()
+        {
+            return TaskTotalCount;
+        }
+
+        /// <summary>
+        /// Get the concurrency value
+        /// </summary>
+        /// <returns>The max number of concurrent task/rest call</returns>
+        protected int GetCmdletConcurrency()
+        {
+            int concurrency = 0;
+
+            /// Hard code number for default task amount per core
+            int asyncTasksPerCoreMultiplier = 8;
+
+            if (Context != null && Context.ConcurrentTaskCount != null)
+            {
+                concurrency = Context.ConcurrentTaskCount.Value;
+            }
+
+            if (concurrency <= 0)
+            {
+                concurrency = Environment.ProcessorCount * asyncTasksPerCoreMultiplier;
+            }
+
+            return concurrency;
+        }
+
+        /// <summary>
+        /// Configure Service Point
+        /// </summary>
+        private void ConfigureServicePointManager()
+        {
+            ServicePointManager.DefaultConnectionLimit = GetCmdletConcurrency();
+            ServicePointManager.Expect100Continue = false;
+            ServicePointManager.UseNagleAlgorithm = true;
+        }
+
+        /// <summary>
+        /// Init the multithread run time resource
+        /// </summary>
+        internal void InitMutltiThreadResources()
+        {
+            int initCount = 1;
+            TaskCounter = new CountdownEvent(initCount);
+
+            int summaryRecordId = 0;
+            string summary = String.Format(Resources.TransmitActiveSummary, TaskTotalCount,
+                TaskFinishedCount, TaskFailedCount, TaskTotalCount);
+            summaryRecord = new ProgressRecord(summaryRecordId, Resources.TransmitActivity, summary);
+        }
+
+        /// <summary>
+        /// Init multi thread WriteObject/WriteError/WriteVerbose/WriteProgress
+        /// </summary>
+        private void InitMultiThreadOutputStream()
+        {
+            OutputStream = new OrderedStreamWriter(WriteObject, WriteExceptionError);
+            VerboseStream = new UnorderedStreamWriter<string>(WriteVerboseWithTimestamp);
+            ProgressStream = new UnorderedStreamWriter<ProgressRecord>(WriteProgress);
+        }
+
+        /// <summary>
+        /// Set up MultiThread environment
+        /// </summary>
+        internal void SetUpMultiThreadEnvironment()
+        {
+            ConfigureServicePointManager();
+            InitMultiThreadOutputStream();
+            InitMutltiThreadResources();
+        }
+
+        /// <summary>
+        /// Write progress/error/verbose/output to main thread
+        /// </summary>
+        protected virtual void GatherStreamToMainThread(bool isEndProcessing = false)
+        {
+            WriteTransmitSummaryStatus(isEndProcessing);
+            ProgressStream.Output();
+            VerboseStream.Output();
+            OutputStream.Output();
+        }
+
+        /// <summary>
+        /// Write transmit summary status
+        /// </summary>
+        protected void WriteTransmitSummaryStatus(bool isEndProcessing = false)
+        {
+            int currentCount = TaskCounter.CurrentCount;
+
+            //The init count for TaskCounter is 1 which could make TaskCounter.CurrentCount greater than TotalCount
+            if (!isEndProcessing)
+            {
+                currentCount--;
+            }
+
+            string summary = String.Format(Resources.TransmitActiveSummary, TaskTotalCount, TaskFinishedCount, TaskFailedCount, currentCount);
+            summaryRecord.StatusDescription = summary;
+            WriteProgress(summaryRecord);
+        }
+
+        /// <summary>
+        /// Run async task
+        /// </summary>
+        /// <param name="task">Task operation</param>
+        /// <param name="taskId">task id</param>
+        protected async void RunConcurrentTask(Task task, long taskId)
+        {
+            //Most Tasks do the web requests.
+            //ServicePointManager.DefaultConnectionLimit will limit the max connection.
+            //So there is no need to limit the amount of concurrent tasks.
+            TaskTotalCount++;
+            TaskCounter.AddCount();
+
+            try
+            {
+                //TODO use semaphore to control the concurrent task count
+                await task;
+                Interlocked.Increment(ref TaskFinishedCount);
+            }
+            catch (Exception e)
+            {
+                Interlocked.Increment(ref TaskFailedCount);
+                OutputStream.WriteError(taskId, e);
+            }
+            finally
+            {
+                TaskCounter.Signal();
+            }
+        }
+
+        #endregion
     }
 }

@@ -38,9 +38,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         [TestInitialize]
         public void InitCommand()
         {
+            MockCmdRunTime.ResetPipelines();
             command = new GetAzureStorageContainerCommand(BlobMock)
             {
-                CommandRuntime = new MockCommandRuntime()
+                CommandRuntime = MockCmdRunTime
             };
         }
 
@@ -138,15 +139,15 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         [TestMethod]
         public void PackCloudBlobContainerWithAclTest()
         {
-            IEnumerable<AzureStorageContainer> containerList = command.PackCloudBlobContainerWithAcl(null);
-            Assert.IsFalse(containerList.Any());
+            RunAsyncCommand(command, () => command.PackCloudBlobContainerWithAcl(null));
+            Assert.IsFalse(MockCmdRunTime.OutputPipeline.Any());
 
-            containerList = command.PackCloudBlobContainerWithAcl(BlobMock.ContainerList);
-            Assert.IsFalse(containerList.Any());
+            RunAsyncCommand(command, () => command.PackCloudBlobContainerWithAcl(BlobMock.ContainerList));
+            Assert.IsFalse(MockCmdRunTime.OutputPipeline.Any());
 
             AddTestContainers();
-            containerList = command.PackCloudBlobContainerWithAcl(BlobMock.ContainerList);
-            Assert.AreEqual(5, containerList.Count());
+            RunAsyncCommand(command, () => command.PackCloudBlobContainerWithAcl(BlobMock.ContainerList));
+            Assert.AreEqual(5, MockCmdRunTime.OutputPipeline.Count());
         }
         
         [TestMethod]
@@ -154,7 +155,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
         {
             AddTestContainers();
             command.Name = "test";
-            command.ExecuteCmdlet();
+            RunAsyncCommand(command, () => command.ExecuteCmdlet());
             Assert.AreEqual(1, ((MockCommandRuntime)command.CommandRuntime).OutputPipeline.Count);
         }
     }

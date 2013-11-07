@@ -367,6 +367,24 @@ namespace Microsoft.WindowsAzure.Commands.Storage {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Main thread writer throw an exception. {0}.
+        /// </summary>
+        internal static string DebugMainThreadWriterThrowException {
+            get {
+                return ResourceManager.GetString("DebugMainThreadWriterThrowException", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Try to dequeue an concurrent queue should never fail since we make sure there are messages in this queue..
+        /// </summary>
+        internal static string DebugTryDequeueShouldNeverFail {
+            get {
+                return ResourceManager.GetString("DebugTryDequeueShouldNeverFail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Can not find your azure storage credential. Please set current storage account using &quot;Set-AzureSubscription&quot; or set the &quot;AZURE_STORAGE_CONNECTION_STRING&quot; environment variable..
         /// </summary>
         internal static string DefaultStorageCredentialsNotFound {
@@ -1204,6 +1222,24 @@ namespace Microsoft.WindowsAzure.Commands.Storage {
         internal static string TransferSummary {
             get {
                 return ResourceManager.GetString("TransferSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Total:  {0}. Successful: {1}.  Failed: {2}. Active: {3}..
+        /// </summary>
+        internal static string TransmitActiveSummary {
+            get {
+                return ResourceManager.GetString("TransmitActiveSummary", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Transimit Status.
+        /// </summary>
+        internal static string TransmitActivity {
+            get {
+                return ResourceManager.GetString("TransmitActivity", resourceCulture);
             }
         }
         

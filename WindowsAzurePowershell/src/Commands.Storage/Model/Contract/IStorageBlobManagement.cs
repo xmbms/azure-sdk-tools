@@ -18,6 +18,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
     using System.Collections.Generic;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
+    using System.Threading.Tasks;
+    using System.Threading;
 
     /// <summary>
     /// Blob management interface
@@ -43,6 +45,16 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="operationContext">Operation context</param>
         /// <returns>The container's permission</returns>
         BlobContainerPermissions GetContainerPermissions(CloudBlobContainer container, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext);
+
+        /// <summary>
+        /// Async Get container presssions
+        /// </summary>
+        /// <param name="container">A cloudblobcontainer object</param>
+        /// <param name="accessCondition">Access condition</param>
+        /// <param name="options">Blob request option</param>
+        /// <param name="operationContext">Operation context</param>
+        Task<BlobContainerPermissions> GetContainerPermissionsAsync(CloudBlobContainer container, AccessCondition accessCondition,
+            BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken);
 
         /// <summary>
         /// Set container permissions

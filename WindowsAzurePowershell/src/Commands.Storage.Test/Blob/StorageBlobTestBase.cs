@@ -19,6 +19,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Service;
+    using Microsoft.WindowsAzure.Commands.Test.Utilities.Common;
 
     /// <summary>
     /// Test base class for storage blob
@@ -35,10 +36,17 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
             set;
         }
 
+        public MockCommandRuntime MockCmdRunTime
+        {
+            get;
+            set;
+        }
+
         [TestInitialize]
         public void InitMock()
         {
             BlobMock = new MockStorageBlobManagement();
+            MockCmdRunTime = new MockCommandRuntime();
         }
 
         [TestCleanup]
@@ -132,6 +140,19 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
                 CloudBlockBlob blob = new CloudBlockBlob(new Uri(uri));
                 blobList.Add(blob);
             }
+        }
+
+        /// <summary>
+        /// Run async command
+        /// </summary>
+        /// <param name="cmd">Storage command</param>
+        /// <param name="asyncAction">Async action</param>
+        protected void RunAsyncCommand(StorageCloudBlobCmdletBase cmd, Action asyncAction)
+        {
+            MockCmdRunTime.ResetPipelines();
+            cmd.SetUpMultiThreadEnvironment();
+            asyncAction();
+            cmd.MultiThreadEndProcessing();
         }
     }
 }

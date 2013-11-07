@@ -20,6 +20,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
     using Microsoft.WindowsAzure.Storage.Blob;
     using Model.Contract;
     using Microsoft.WindowsAzure.Storage.Auth;
+    using System.Threading.Tasks;
+    using System.Threading;
 
     /// <summary>
     /// Mock blob management
@@ -418,6 +420,21 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         public void AbortCopy(ICloudBlob blob, string copyId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             return;
+        }
+
+        /// <summary>
+        /// Async Get container presssions
+        /// </summary>
+        /// <param name="container">A cloudblobcontainer object</param>
+        /// <param name="accessCondition">Access condition</param>
+        /// <param name="options">Blob request option</param>
+        /// <param name="operationContext">Operation context</param>
+        public Task<BlobContainerPermissions> GetContainerPermissionsAsync(CloudBlobContainer container,
+            AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext,
+            CancellationToken cancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.GetContainerPermissions(container,
+                accessCondition, options, operationContext));
         }
     }
 }
