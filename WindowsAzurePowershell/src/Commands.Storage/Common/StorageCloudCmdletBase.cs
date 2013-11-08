@@ -18,13 +18,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Management.Automation;
+    using System.Net;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Commands.Utilities.Common;
     using Microsoft.WindowsAzure.Storage;
     using Model.ResourceModel;
     using ServiceModel = System.ServiceModel;
-    using System.Threading;
-    using System.Net;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// Base cmdlet for all storage cmdlet that works with cloud
@@ -368,6 +368,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             set { enableMultiThread = value; }
         }
         private bool enableMultiThread = true;
+        private SemaphoreSlim limitedConcurrency = null;
 
         /// <summary>
         /// Summary progress record on multithread task
@@ -432,6 +433,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// <returns>The max number of concurrent task/rest call</returns>
         protected int GetCmdletConcurrency()
         {
+            //TODO should provide a global configuration.
+            //Note:
+            //1. The concurrent task count of the storage context will be used as the concurrency level
+            //   if running "StorageCmdlet -Context $context"
+            //2. The default concurrency will be used if running "$context | StorageCmdlet"
+            //   since we don't know how to define the correct concurrency for "($context1, $context2) | StorageCmdlet" 
+            //   if the concurrent task count were defined in both $context1 and $context2.
             int concurrency = 0;
 
             /// Hard code number for default task amount per core
@@ -472,6 +480,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             string summary = String.Format(Resources.TransmitActiveSummary, TaskTotalCount,
                 TaskFinishedCount, TaskFailedCount, TaskTotalCount);
             summaryRecord = new ProgressRecord(summaryRecordId, Resources.TransmitActivity, summary);
+            limitedConcurrency = new SemaphoreSlim(GetCmdletConcurrency());
         }
 
         /// <summary>
@@ -538,7 +547,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
 
             try
             {
-                //TODO use semaphore to control the concurrent task count
+                limitedConcurrency.Wait(CmdletCancellationToken);
                 await task;
                 Interlocked.Increment(ref TaskFinishedCount);
             }
@@ -549,6 +558,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             }
             finally
             {
+                limitedConcurrency.Release();
                 TaskCounter.Signal();
             }
         }

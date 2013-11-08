@@ -367,7 +367,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Main thread writer throw an exception. {0}.
+        ///   Looks up a localized string similar to Main thread writer throw an exception. Exception: {0}.
         /// </summary>
         internal static string DebugMainThreadWriterThrowException {
             get {
@@ -1226,7 +1226,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Total:  {0}. Successful: {1}.  Failed: {2}. Active: {3}..
+        ///   Looks up a localized string similar to Total: {0}. Successful: {1}. Failed: {2}. Active: {3}..
         /// </summary>
         internal static string TransmitActiveSummary {
             get {
@@ -1235,7 +1235,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Transimit Status.
+        ///   Looks up a localized string similar to Transmit Status.
         /// </summary>
         internal static string TransmitActivity {
             get {

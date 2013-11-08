@@ -14,15 +14,10 @@
 
 namespace Microsoft.WindowsAzure.Commands.Storage.Common
 {
-    using Microsoft.WindowsAzure.Storage.Blob;
     using System;
     using System.Collections.Concurrent;
-    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using System.Management.Automation;
-    using System.Text;
-    using System.Threading;
 
     /// <summary>
     /// Stream writer used in multi-thread environment
@@ -39,7 +34,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// <summary>
         /// The output writer in main thread
         /// </summary>
-        private Action<T> mainThreadWriter;
+        private Action<T> MainThreadWriter;
 
         /// <summary>
         /// MultiThreadStreamWriter Constructor
@@ -47,7 +42,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         public UnorderedStreamWriter(Action<T> writer)
         {
             Stream = new ConcurrentQueue<T>();
-            mainThreadWriter = writer;
+            MainThreadWriter = writer;
         }
 
         /// <summary>
@@ -79,11 +74,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                 {
                     count--;
 
-                    if (mainThreadWriter != null)
+                    if (MainThreadWriter != null)
                     {
                         try
                         {
-                            mainThreadWriter(result);
+                            MainThreadWriter(result);
                         }
                         catch (Exception e)
                         {

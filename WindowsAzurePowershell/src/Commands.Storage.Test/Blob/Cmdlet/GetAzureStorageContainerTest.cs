@@ -17,10 +17,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob.Cmdlet
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Commands.Test.Utilities.Common;
+    using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Microsoft.WindowsAzure.Storage.Blob;
-    using Model.ResourceModel;
     using Storage.Blob.Cmdlet;
     using Storage.Common;
 

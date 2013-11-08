@@ -19,7 +19,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using System.Text;
 
     /// <summary>
     /// Gather the output from sub-thread and output them in the main thread accroding to the input order
@@ -51,17 +50,17 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         private Lazy<ConcurrentDictionary<long, bool>> LockedStream;
         
         /// <summary>
-        /// Main thread output writer. WriteObject is a good candiate for it.
+        /// Main thread output writer. WriteObject is a good candidate for it.
         /// </summary>
         private Action<object> OutputWriter;
 
         /// <summary>
-        /// Main thread error writer. WriteError is a googd candiate for it.
+        /// Main thread error writer. WriteError is a goog candidate for it.
         /// </summary>
         private Action<Exception> ErrorWriter;
 
         /// <summary>
-        /// Create a OrderedStreamWriter
+        /// Create an OrderedStreamWriter
         /// </summary>
         /// <param name="outputWriter">Main thread output writer</param>
         /// <param name="errorWriter">Main thread error writer</param>
@@ -166,7 +165,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                     }
                     catch (Exception e)
                     {
-                        Debug.Fail(e.Message);
+                        Debug.Fail(String.Format("{0}", e));
                     }
 
                     if (!LockedStream.IsValueCreated || !LockedStream.Value.ContainsKey(CurrentOutputId))
@@ -204,7 +203,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             public ConcurrentQueue<object> DataQueue;
 
             /// <summary>
-            /// Create a OutputUnit
+            /// Create an OutputUnit
             /// </summary>
             /// <param name="type">Output type</param>
             /// <param name="data">Output data</param>

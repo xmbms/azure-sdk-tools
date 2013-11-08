@@ -16,12 +16,12 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
 {
     using System;
     using System.Collections.Generic;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Auth;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Model.Contract;
-    using Microsoft.WindowsAzure.Storage.Auth;
-    using System.Threading.Tasks;
-    using System.Threading;
 
     /// <summary>
     /// Mock blob management
@@ -429,6 +429,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         /// <param name="accessCondition">Access condition</param>
         /// <param name="options">Blob request option</param>
         /// <param name="operationContext">Operation context</param>
+        /// <param name="cancellationToken">User cancellation token</param>
+        /// <returns>A task object which retrieve the permission of the specified container</returns>
         public Task<BlobContainerPermissions> GetContainerPermissionsAsync(CloudBlobContainer container,
             AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext,
             CancellationToken cancellationToken)
