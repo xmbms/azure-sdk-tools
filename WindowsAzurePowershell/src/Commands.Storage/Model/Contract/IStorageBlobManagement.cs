@@ -69,7 +69,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         void SetContainerPermissions(CloudBlobContainer container, BlobContainerPermissions permissions, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext);
 
         /// <summary>
-        /// Get an CloudBlobContainer instance in local
+        /// Get a CloudBlobContainer instance in local
         /// </summary>
         /// <param name="name">Container name</param>
         /// <returns>A CloudBlobContainer in local memory</returns>
@@ -96,7 +96,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         bool DoesContainerExist(CloudBlobContainer container, BlobRequestOptions options, OperationContext OperationContext);
 
         /// <summary>
-        /// Whether the blob is exists or not
+        /// Whether the blob exists or not
         /// </summary>
         /// <param name="blob">A icloudblob object</param>
         /// <param name="options">Blob request option</param>
@@ -141,7 +141,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="deleteSnapshotsOption">Delete snapshots option</param>
         /// <param name="accessCondition">Access condition</param>
         /// <param name="operationContext">Operation context</param>
-        /// <returns>An enumerable collection of icloudblob</returns>
+        /// <param name="options">Blob request option</param>
         void DeleteICloudBlob(ICloudBlob blob, DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext);
 
         /// <summary>

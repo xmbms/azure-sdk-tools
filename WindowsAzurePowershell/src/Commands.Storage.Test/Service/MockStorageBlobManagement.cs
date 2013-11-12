@@ -124,7 +124,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         }
 
         /// <summary>
-        /// Get an CloudBlobContainer instance in local
+        /// Get a CloudBlobContainer instance in local
         /// </summary>
         /// <param name="name">Container name</param>
         /// <returns>A CloudBlobContainer in local memory</returns>
@@ -302,7 +302,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         }
 
         /// <summary>
-        /// Whether the blob is exists or not
+        /// Whether the blob exists or not
         /// </summary>
         /// <param name="blob">A icloudblob object</param>
         /// <param name="options">Blob request option</param>
@@ -339,7 +339,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         /// <param name="deleteSnapshotsOption">Delete snapshots option</param>
         /// <param name="accessCondition">Access condition</param>
         /// <param name="operationContext">Operation context</param>
-        /// <returns>An enumerable collection of icloudblob</returns>
+        /// <param name="options">Blob request option</param>
         public void DeleteICloudBlob(ICloudBlob blob, DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext)
         {
             CloudBlobContainer container = blob.Container;
