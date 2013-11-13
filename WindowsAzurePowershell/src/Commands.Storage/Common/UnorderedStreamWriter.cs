@@ -18,6 +18,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
     using System.Collections.Concurrent;
     using System.Diagnostics;
     using System.Linq;
+    using System.Management.Automation;
 
     /// <summary>
     /// Stream writer used in multi-thread environment
@@ -80,11 +81,15 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                         {
                             MainThreadWriter(result);
                         }
+                        catch (PipelineStoppedException)
+                        {
+                            //Directly stop the output stream when throw an exception.
+                            //If so, we could quickly response for ctrl + c and etc.
+                            break;
+                        }
                         catch (Exception e)
                         {
                             Debug.Fail(Resources.DebugMainThreadWriterThrowException, e.Message);
-                            //Directly stop the output stream when throw an exception.
-                            //If so, we could quickly response for ctrl + c and etc.
                             break;
                         }
                     }

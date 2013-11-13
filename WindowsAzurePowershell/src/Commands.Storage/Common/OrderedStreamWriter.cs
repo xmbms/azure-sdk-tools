@@ -19,6 +19,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Management.Automation;
 
     /// <summary>
     /// Gather the output from sub-thread and output them in the main thread accroding to the input order
@@ -163,9 +164,16 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                             }
                         }
                     }
+                    catch (PipelineStoppedException)
+                    {
+                        //Directly stop the output stream when throw an exception.
+                        //If so, we could quickly response for ctrl + c and etc.
+                        break;
+                    }
                     catch (Exception e)
                     {
                         Debug.Fail(String.Format("{0}", e));
+                        break;
                     }
 
                     if (!LockedStream.IsValueCreated || !LockedStream.Value.ContainsKey(CurrentOutputId))
