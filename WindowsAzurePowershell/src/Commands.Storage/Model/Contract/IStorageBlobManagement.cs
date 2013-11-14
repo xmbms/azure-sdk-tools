@@ -34,7 +34,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="options">Blob request option</param>
         /// <param name="operationContext">Operation context</param>
         /// <returns>An enumerable collection of cloudblobcontainer</returns>
-        IEnumerable<CloudBlobContainer> ListContainers(string prefix, ContainerListingDetails detailsIncluded, BlobRequestOptions options, OperationContext OperationContext);
+        IEnumerable<CloudBlobContainer> ListContainers(string prefix, ContainerListingDetails detailsIncluded, BlobRequestOptions options, OperationContext operationContext);
 
         /// <summary>
         /// Get container presssions
@@ -93,7 +93,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="options">Blob request option</param>
         /// <param name="operationContext">Operation context</param>
         /// <returns>True if the specific container exists, otherwise return false</returns>
-        bool DoesContainerExist(CloudBlobContainer container, BlobRequestOptions options, OperationContext OperationContext);
+        bool DoesContainerExist(CloudBlobContainer container, BlobRequestOptions options, OperationContext operationContext);
 
         /// <summary>
         /// Whether the blob exists or not
@@ -102,7 +102,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="options">Blob request option</param>
         /// <param name="operationContext">Operation context</param>
         /// <returns>True if the specific blob exists, otherwise return false</returns>
-        bool DoesBlobExist(ICloudBlob blob, BlobRequestOptions options, OperationContext OperationContext);
+        bool DoesBlobExist(ICloudBlob blob, BlobRequestOptions options, OperationContext operationContext);
 
         /// <summary>
         /// Create the container if not exists
@@ -111,7 +111,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="options">Blob request option</param>
         /// <param name="operationContext">Operation context</param>
         /// <returns>True if the container did not already exist and was created; otherwise false.</returns>
-        bool CreateContainerIfNotExists(CloudBlobContainer container, BlobRequestOptions requestOptions, OperationContext OperationContext);
+        bool CreateContainerIfNotExists(CloudBlobContainer container, BlobRequestOptions requestOptions, OperationContext operationContext);
 
         /// <summary>
         /// Delete container
@@ -120,7 +120,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="accessCondition">Access condition</param>
         /// <param name="options">Blob request option</param>
         /// <param name="operationContext">Operation context</param>
-        void DeleteContainer(CloudBlobContainer container, AccessCondition accessCondition, BlobRequestOptions options, OperationContext OperationContext);
+        void DeleteContainer(CloudBlobContainer container, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext);
 
         /// <summary>
         /// List all blobs in specified containers
@@ -188,5 +188,25 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         /// <param name="options">Blob request options</param>
         /// <param name="operationContext">Operation context</param>
         void AbortCopy(ICloudBlob blob, string copyId, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext);
+
+        Task<bool> DoesContainerExistAsync(CloudBlobContainer container, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task<ICloudBlob> GetBlobReferenceFromServerAsync(CloudBlobContainer container, string blobName, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task FetchBlobAttributesAsync(ICloudBlob blob, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task<bool> CreateContainerIfNotExistsAsync(CloudBlobContainer container, BlobContainerPublicAccessType accessType, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task DeleteContainerAsync(CloudBlobContainer container, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task AbortCopyAsync(ICloudBlob blob, string abortCopyId, AccessCondition accessCondition, BlobRequestOptions abortRequestOption, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task SetContainerPermissionsAsync(CloudBlobContainer container, BlobContainerPermissions permissions, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task DeleteICloudBlobAsync(ICloudBlob blob, DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task SetBlobMetadataAsync(ICloudBlob blob, System.Collections.Hashtable BlobMetadata, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
+
+        Task SetBlobPropertiesAsync(ICloudBlob blob, System.Collections.Hashtable BlobProperties, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken);
     }
 }

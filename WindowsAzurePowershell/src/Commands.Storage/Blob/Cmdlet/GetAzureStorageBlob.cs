@@ -18,6 +18,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
     using System.Collections.Generic;
     using System.Management.Automation;
     using System.Security.Permissions;
+    using System.Threading.Tasks;
     using Common;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
@@ -108,7 +109,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// </summary>
         /// <param name="containerName">container name</param>
         /// <returns>return CloudBlobContianer object if specified container exists, otherwise throw an exception</returns>
-        internal CloudBlobContainer GetCloudBlobContainerByName(string containerName, bool skipCheckExists = false)
+        internal async Task<CloudBlobContainer> GetCloudBlobContainerByName(string containerName, bool skipCheckExists = false)
         {
             if (!NameUtil.IsValidContainerName(containerName))
             {
@@ -118,8 +119,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             BlobRequestOptions requestOptions = null;
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
 
-            if (!skipCheckExists && container.ServiceClient.Credentials.IsSharedKey 
-                && !Channel.DoesContainerExist(container, requestOptions, OperationContext))
+            if (!skipCheckExists && !await Channel.DoesContainerExistAsync(container, requestOptions, OperationContext, CmdletCancellationToken))
             {
                 throw new ArgumentException(String.Format(Resources.ContainerNotFound, containerName));
             }
@@ -133,7 +133,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// <param name="containerName">container name</param>
         /// <param name="blobName">blob name pattern</param>
         /// <returns>An enumerable collection of IListBlobItem</returns>
-        internal IEnumerable<IListBlobItem> ListBlobsByName(string containerName, string blobName)
+        internal async Task ListBlobsByName(string containerName, string blobName,
+            AzureStorageContext context, long taskId)
         {
             CloudBlobContainer container = null;
             BlobRequestOptions requestOptions = null;
@@ -141,11 +142,12 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
 
             bool useFlatBlobListing = true;
             string prefix = string.Empty;
+            OutputStream.LockStream(taskId);
             BlobListingDetails details = BlobListingDetails.Snapshots | BlobListingDetails.Metadata | BlobListingDetails.Copy;
 
             if (String.IsNullOrEmpty(blobName) || WildcardPattern.ContainsWildcardCharacters(blobName))
             {
-                container = GetCloudBlobContainerByName(containerName);
+                container = await GetCloudBlobContainerByName(containerName);
 
                 IEnumerable<IListBlobItem> blobs = Channel.ListBlobs(container, prefix, useFlatBlobListing, details, requestOptions, OperationContext);
                 WildcardOptions options = WildcardOptions.IgnoreCase | WildcardOptions.Compiled;
@@ -167,13 +169,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
 
                     if (wildcard == null || wildcard.IsMatch(blob.Name))
                     {
-                        yield return blob;
+                        WriteBlobsWithContext(taskId, context, blob);
                     }
                 }
             }
             else
             {
-                container = GetCloudBlobContainerByName(containerName, true);
+                container = await GetCloudBlobContainerByName(containerName, true);
 
                 if (!NameUtil.IsValidBlobName(blobName))
                 {
@@ -181,16 +183,18 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                 }
 
                 ICloudBlob blob = Channel.GetBlobReferenceFromServer(container, blobName, accessCondition, requestOptions, OperationContext);
-                
+
                 if (null == blob)
                 {
                     throw new ResourceNotFoundException(String.Format(Resources.BlobNotFound, blobName, containerName));
                 }
                 else
                 {
-                    yield return blob;
+                    WriteBlobsWithContext(taskId, context, blob);
                 }
             }
+
+            OutputStream.UnLockStream(taskId);
         }
 
         /// <summary>
@@ -199,60 +203,66 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// <param name="containerName">container name</param>
         /// <param name="prefix">blob preifx</param>
         /// <returns>An enumerable collection of IListBlobItem</returns>
-        internal IEnumerable<IListBlobItem> ListBlobsByPrefix(string containerName, string prefix)
+        internal async Task ListBlobsByPrefix(string containerName, string prefix,
+            AzureStorageContext context, long taskId)
         {
-            CloudBlobContainer container = GetCloudBlobContainerByName(containerName);
+            OutputStream.LockStream(taskId);
+
+            CloudBlobContainer container = await GetCloudBlobContainerByName(containerName);
 
             BlobRequestOptions requestOptions = null;
             bool useFlatBlobListing = true;
             BlobListingDetails details = BlobListingDetails.Snapshots | BlobListingDetails.Metadata | BlobListingDetails.Copy;
 
-            return Channel.ListBlobs(container, prefix, useFlatBlobListing, details, requestOptions, OperationContext);
+            IEnumerable<IListBlobItem> blobs = Channel.ListBlobs(container, prefix, useFlatBlobListing,
+                details, requestOptions, OperationContext);
+
+            foreach (IListBlobItem blobItem in blobs)
+            {
+                ICloudBlob blob = blobItem as ICloudBlob;
+
+                if (blob == null)
+                {
+                    continue;
+                }
+
+                WriteBlobsWithContext(taskId, context, blob);
+            }
+
+            OutputStream.UnLockStream(taskId);
         }
 
         /// <summary>
         /// write blobs with storage context
         /// </summary>
         /// <param name="blobList">An enumerable collection of IListBlobItem</param>
-        internal void WriteBlobsWithContext(IEnumerable<IListBlobItem> blobList)
+        internal void WriteBlobsWithContext(long taskId, AzureStorageContext context, ICloudBlob blob)
         {
-            if (null == blobList)
-            {
-                return;
-            }
-
-            foreach (IListBlobItem blobItem in blobList)
-            {
-                ICloudBlob blob = blobItem as ICloudBlob;
-                
-                if (blob == null)
-                {
-                    continue;
-                }
-
-                AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
-                WriteObjectWithStorageContext(azureBlob);
-            }
+            AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
+            azureBlob.Context = context;
+            OutputStream.WriteObject(taskId, azureBlob);
         }
 
         /// <summary>
-        /// Execute command
+        /// execute command
         /// </summary>
         [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public override void ExecuteCmdlet()
         {
-            IEnumerable<IListBlobItem> blobList = null;
+
+            Task task = null;
+            long taskId = GetAvailableTaskId();
 
             if (PrefixParameterSet == ParameterSetName)
             {
-                blobList = ListBlobsByPrefix(containerName, blobPrefix);
+                task = ListBlobsByPrefix(containerName, blobPrefix, Context, taskId);
             }
             else
             {
-                blobList = ListBlobsByName(containerName, blobName);
+                task = ListBlobsByName(containerName, blobName, Context, taskId);
             }
 
-            WriteBlobsWithContext(blobList);
+            RunConcurrentTask(task, taskId);
         }
     }
 }

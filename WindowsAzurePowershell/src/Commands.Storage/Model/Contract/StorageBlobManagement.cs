@@ -297,5 +297,59 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
         {
             return container.GetPermissionsAsync(accessCondition, options, operationContext, cancellationToken);
         }
+
+
+        public Task<bool> DoesContainerExistAsync(CloudBlobContainer container, BlobRequestOptions requestOptions, OperationContext OperationContext, CancellationToken cancellationToken)
+        {
+            return container.ExistsAsync(requestOptions, OperationContext, cancellationToken);
+        }
+
+        public Task<ICloudBlob> GetBlobReferenceFromServerAsync(CloudBlobContainer container, string blobName, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return container.GetBlobReferenceFromServerAsync(blobName, accessCondition, options, operationContext, cancellationToken);
+        }
+
+
+        public Task FetchBlobAttributesAsync(ICloudBlob blob, AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return blob.FetchAttributesAsync(accessCondition, options, operationContext, cancellationToken);
+        }
+
+
+        public Task<bool> CreateContainerIfNotExistsAsync(CloudBlobContainer container, BlobContainerPublicAccessType accessType, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return container.CreateIfNotExistsAsync(accessType, requestOptions, operationContext, cancellationToken);
+        }
+
+        public Task DeleteContainerAsync(CloudBlobContainer container, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return container.DeleteAsync(accessCondition, requestOptions, operationContext, cancellationToken);
+        }
+
+        public Task AbortCopyAsync(ICloudBlob blob, string copyId, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return blob.AbortCopyAsync(copyId, accessCondition, requestOptions, operationContext, cancellationToken);
+        }
+
+        public Task SetContainerPermissionsAsync(CloudBlobContainer container, BlobContainerPermissions permissions, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return container.SetPermissionsAsync(permissions, accessCondition, requestOptions, operationContext, cancellationToken);
+        }
+
+        public Task DeleteICloudBlobAsync(ICloudBlob blob, DeleteSnapshotsOption deleteSnapshotsOption, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cancellationToken)
+        {
+            return blob.DeleteAsync(deleteSnapshotsOption, accessCondition, requestOptions, operationContext, cancellationToken);
+        }
+
+
+        public Task SetBlobMetadataAsync(ICloudBlob blob, System.Collections.Hashtable BlobMetadata, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext OperationContext, CancellationToken CmdletCancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public Task SetBlobPropertiesAsync(ICloudBlob blob, System.Collections.Hashtable BlobProperties, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext OperationContext, CancellationToken CmdletCancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

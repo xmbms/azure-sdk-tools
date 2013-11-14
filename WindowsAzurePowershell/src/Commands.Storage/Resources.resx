@@ -611,4 +611,12 @@ Failed: {2}.</value>
   <data name="TransmitActivity" xml:space="preserve">
     <value>Transmit Status</value>
   </data>
+  <data name="BlobTransmitCanceled" xml:space="preserve">
+    <value>Transmission for blob '{0}' in container '{1}' is canceled.</value>
+    <comment>0 for blob name, 1 for container name.</comment>
+  </data>
+  <data name="BlobTransmitStartSuccessfully" xml:space="preserve">
+    <value>Transmission for blob '{0}' in container '{1}' started sucessfully.</value>
+    <comment>0 for blob name, 1 for container name.</comment>
+  </data>
 </root>

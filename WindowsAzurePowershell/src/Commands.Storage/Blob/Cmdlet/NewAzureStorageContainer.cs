@@ -1,4 +1,4 @@
-﻿﻿// ----------------------------------------------------------------------------------
+﻿// ----------------------------------------------------------------------------------
 //
 // Copyright Microsoft Corporation
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,6 +65,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         public NewAzureStorageContainerCommand(IStorageBlobManagement channel)
         {
             Channel = channel;
+            EnableMultiThread = false;
         }
 
         /// <summary>
@@ -107,7 +108,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                     throw new ArgumentException(Resources.OnlyOnePermissionForContainer);
             }
 
-            if(accessLevel == StorageNouns.ContainerAclContainer || accessLevel == StorageNouns.ContainerAclBlob)
+            if (accessLevel == StorageNouns.ContainerAclContainer || accessLevel == StorageNouns.ContainerAclBlob)
             {
                 Channel.SetContainerPermissions(container, permissions, accessCondition, requestOptions, OperationContext);
             }

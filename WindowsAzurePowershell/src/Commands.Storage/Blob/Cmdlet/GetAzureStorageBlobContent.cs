@@ -20,6 +20,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
     using System.Security;
     using System.Security.Permissions;
     using Common;
+    using Microsoft.WindowsAzure.Commands.Storage.Utilities;
+    using Microsoft.WindowsAzure.Management.Storage.Blob;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.DataMovement;
@@ -92,16 +94,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         }
         private bool checkMd5;
 
-        /// <summary>
-        /// Amount of concurrent async tasks to run per available core.
-        /// </summary>
-        [Parameter(HelpMessage = "The total amount of concurrent async tasks. The default value is ProcessorCount * 8")]
-        public int ConcurrentTaskCount
-        {
-            get { return concurrentTaskCount; }
-            set { concurrentTaskCount = value; }
-        }
-
         private AzureToFileSystemFileNameResolver fileNameResolver;
 
         /// <summary>
@@ -129,14 +121,20 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// <param name="filePath">Destination file path</param>
         internal virtual void DownloadBlob(ICloudBlob blob, string filePath)
         {
-            int id = 0;
+            int id = RecordIdUtil.GetRecordId();
             string activity = String.Format(Resources.ReceiveAzureBlobActivity, blob.Name, filePath);
             string status = Resources.PrepareDownloadingBlob;
             ProgressRecord pr = new ProgressRecord(id, activity, status);
+            DataMovementUserData data = new DataMovementUserData()
+            {
+                Data = blob,
+                TaskId = GetAvailableTaskId(),
+                Record = pr
+            };
 
-            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueDownload(blob, filePath, checkMd5, OnTaskStart, OnTaskProgress, OnTaskFinish, pr);
+            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueDownload(blob, filePath, checkMd5, OnTaskStart, OnTaskProgress, OnTaskFinish, data);
 
-            StartSyncTaskInTransferManager(taskAction, pr);
+            StartAsyncTaskInTransferManager(taskAction);
         }
 
         /// <summary>
@@ -339,6 +337,21 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             else
             {
                 WriteObjectWithStorageContext(azureBlob);
+            }
+        }
+
+        /// <summary>
+        /// On Task run successfully
+        /// </summary>
+        /// <param name="data">User data</param>
+        protected override void OnTaskSuccessful(DataMovementUserData data)
+        {
+            ICloudBlob blob = data.Data as ICloudBlob;
+
+            if (blob != null)
+            {
+                AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
+                OutputStream.WriteObject(data.TaskId, azureBlob);
             }
         }
     }

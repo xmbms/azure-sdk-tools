@@ -20,7 +20,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
     using System.Globalization;
     using System.IO;
     using System.Management.Automation;
+    using System.Threading.Tasks;
     using Common;
+    using Microsoft.WindowsAzure.Commands.Storage.Utilities;
+    using Microsoft.WindowsAzure.Management.Storage.Blob;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.DataMovement;
@@ -178,17 +181,23 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="blob">destination azure blob object</param>
         internal virtual void Upload2Blob(string filePath, ICloudBlob blob)
         {
-            int id = 0;
+            int id = RecordIdUtil.GetRecordId();
             string activity = String.Format(Resources.SendAzureBlobActivity, filePath, blob.Name, blob.Container.Name);
             string status = Resources.PrepareUploadingBlob;
             ProgressRecord pr = new ProgressRecord(id, activity, status);
+            DataMovementUserData data = new DataMovementUserData()
+            {
+                Data = blob,
+                TaskId = GetAvailableTaskId(),
+                Record = pr
+            };
 
             Action<BlobTransferManager> taskAction = delegate(BlobTransferManager transferManager)
             {
-                transferManager.QueueUpload(blob, filePath, OnTaskStart, OnTaskProgress, OnTaskFinish, pr);
+                transferManager.QueueUpload(blob, filePath, OnTaskStart, OnTaskProgress, OnTaskFinish, data);
             };
 
-            StartSyncTaskInTransferManager(taskAction, pr);
+            StartAsyncTaskInTransferManager(taskAction);
         }
 
         /// <summary>
@@ -552,6 +561,35 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                 SetBlobMeta(blob, Metadata);
 
                 WriteObjectWithStorageContext(blob);
+            }
+        }
+
+        /// <summary>
+        /// On Task run successfully
+        /// </summary>
+        /// <param name="data">User data</param>
+        protected override void OnTaskSuccessful(DataMovementUserData data)
+        {
+            ICloudBlob blob = data.Data as ICloudBlob;
+
+            if (blob != null)
+            {
+                AccessCondition accessCondition = null;
+                BlobRequestOptions requestOptions = null;
+
+                Task[] tasks = new Task[3];
+                //TODO reduce the number of task
+                //TODO ConfigureAwait
+                tasks[0] = Channel.FetchBlobAttributesAsync(blob, accessCondition,
+                    requestOptions, OperationContext, CmdletCancellationToken);
+                tasks[1] = Channel.SetBlobMetadataAsync(blob, BlobMetadata, accessCondition, requestOptions, OperationContext, CmdletCancellationToken);
+                tasks[2] = Channel.SetBlobPropertiesAsync(blob, BlobProperties, accessCondition, requestOptions, OperationContext, CmdletCancellationToken);
+
+                //await Task.WhenAll(in .net4.5) is better Task.WaitAll(.net 4.0) since WailtAll will block the thread
+                Task.WaitAll(tasks, CmdletCancellationToken);
+
+                AzureStorageBlob azureBlob = new AzureStorageBlob(blob);
+                OutputStream.WriteObject(data.TaskId, azureBlob);
             }
         }
     }

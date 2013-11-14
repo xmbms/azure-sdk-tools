@@ -19,7 +19,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
     using System.Management.Automation;
     using System.Security.Permissions;
     using System.Threading;
+    using System.Threading.Tasks;
     using Common;
+    using Microsoft.WindowsAzure.Commands.Storage.Utilities;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Model.ResourceModel;
@@ -79,87 +81,34 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         private bool waitForComplete;
 
         /// <summary>
-        /// ICloudBlob objects which need to mointor until copy complete
-        /// </summary>
-        private List<ICloudBlob> jobList = new List<ICloudBlob>();
-
-        /// <summary>
-        /// Copy task count
-        /// </summary>
-        private int total = 0;
-        private int failed = 0;
-        private int finished = 0;
-
-        /// <summary>
         /// Execute command
         /// </summary>
         [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public override void ExecuteCmdlet()
         {
-            ICloudBlob blob = default(ICloudBlob);
+            long taskId = GetAvailableTaskId();
+            ProgressRecord record = GetProgressRecord();
+            Task task = null;
+
             switch (ParameterSetName)
             {
                 case NameParameterSet:
-                    blob = GetBlobWithCopyStatus(ContainerName, BlobName);
+                    task = GetBlobWithCopyStatus(ContainerName, BlobName, Context, taskId, record);
                     break;
                 case ContainerPipelineParmeterSet:
-                    blob = GetBlobWithCopyStatus(CloudBlobContainer, BlobName);
+                    task = GetBlobWithCopyStatus(CloudBlobContainer, BlobName, Context, taskId, record);
                     break;
                 case BlobPipelineParameterSet:
-                    blob = GetBlobWithCopyStatus(ICloudBlob);
+                    task = GetBlobWithCopyStatus(ICloudBlob, Context, taskId, record);
                     break;
             }
 
-            total++;
-
-            if (blob.CopyState == null)
-            {
-                throw new ArgumentException(String.Format(Resources.CopyTaskNotFound, blob.Name, blob.Container.Name));
-            }
-            else
-            {
-                UpdateTaskCount(blob.CopyState.Status);
-
-                if (blob.CopyState.Status == CopyStatus.Pending && waitForComplete)
-                {
-                    jobList.Add(blob);
-                }
-                else
-                {
-                    WriteCopyState(blob);
-                }
-            }
+            RunConcurrentTask(task, taskId);
         }
 
-        /// <summary>
-        /// Update failed/finished task count
-        /// </summary>
-        /// <param name="status">Copy status</param>
-        private void UpdateTaskCount(CopyStatus status)
+        internal ProgressRecord GetProgressRecord()
         {
-            switch (status)
-            {
-                case CopyStatus.Invalid:
-                case CopyStatus.Failed:
-                case CopyStatus.Aborted:
-                    failed++;
-                    break;
-                case CopyStatus.Pending:
-                    break;
-                case CopyStatus.Success:
-                default:
-                    finished++;
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// Write copy state of the specified blob
-        /// </summary>
-        /// <param name="blob">ICloudBlobObject</param>
-        internal void WriteCopyState(ICloudBlob blob)
-        {
-            WriteObject(blob.CopyState);
+            return new ProgressRecord(RecordIdUtil.GetRecordId(), Resources.CopyBlobActivity, Resources.CopyBlobActivity);
         }
 
         /// <summary>
@@ -183,7 +132,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             progress.Activity = activity;
             string message = String.Format(Resources.CopyBlobPendingStatus, percent, blob.CopyState.BytesCopied, blob.CopyState.TotalBytes);
             progress.StatusDescription = message;
-            WriteProgress(progress);
+            ProgressStream.WriteStream(progress);
         }
 
         /// <summary>
@@ -192,10 +141,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// <param name="containerName">Container name</param>
         /// <param name="blobName">blob name</param>
         /// <returns>ICloudBlob object</returns>
-        private ICloudBlob GetBlobWithCopyStatus(string containerName, string blobName)
+        private async Task GetBlobWithCopyStatus(string containerName, string blobName, AzureStorageContext context,
+            long taskId, ProgressRecord record)
         {
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
-            return GetBlobWithCopyStatus(container, blobName);
+            await GetBlobWithCopyStatus(container, blobName, context, taskId, record);
         }
 
         /// <summary>
@@ -204,7 +154,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// <param name="container">CloudBlobContainer object</param>
         /// <param name="blobName">Blob name</param>
         /// <returns>ICloudBlob object</returns>
-        private ICloudBlob GetBlobWithCopyStatus(CloudBlobContainer container, string blobName)
+        private async Task GetBlobWithCopyStatus(CloudBlobContainer container, string blobName,
+            AzureStorageContext context, long taskId, ProgressRecord record)
         {
             AccessCondition accessCondition = null;
             BlobRequestOptions options = null;
@@ -212,14 +163,21 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             ValidateBlobName(blobName);
             ValidateContainerName(container.Name);
 
-            ICloudBlob blob = Channel.GetBlobReferenceFromServer(container, blobName, accessCondition, options, OperationContext);
+            ICloudBlob blob = default(ICloudBlob);
 
-            if (blob == null)
+            try
             {
-                throw new ResourceNotFoundException(String.Format(Resources.BlobNotFound, blobName, container.Name));
+                blob = await Channel.GetBlobReferenceFromServerAsync(container, blobName, accessCondition, options, OperationContext, CmdletCancellationToken);
+            }
+            catch (StorageException e)
+            {
+                if (e.IsNotFoundException())
+                {
+                    throw new ResourceNotFoundException(String.Format(Resources.BlobNotFound, blobName, container.Name));
+                }
             }
 
-            return GetBlobWithCopyStatus(blob);
+            await GetBlobWithCopyStatus(blob, context, taskId, record);
         }
 
         /// <summary>
@@ -227,89 +185,36 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// </summary>
         /// <param name="blob">ICloudBlob object</param>
         /// <returns>ICloudBlob object</returns>
-        private ICloudBlob GetBlobWithCopyStatus(ICloudBlob blob)
+        private async Task GetBlobWithCopyStatus(ICloudBlob blob, AzureStorageContext context,
+            long taskId, ProgressRecord record)
         {
             ValidateBlobName(blob.Name);
 
             AccessCondition accessCondition = null;
             BlobRequestOptions options = null;
-            Channel.FetchBlobAttributes(blob, accessCondition, options, OperationContext);
-            return blob;
-        }
 
-        /// <summary>
-        /// Cmdlet end processing
-        /// </summary>
-        protected override void EndProcessing()
-        {
-            if (jobList.Count >= 0)
+            do
             {
-                List<ProgressRecord> records = new List<ProgressRecord>();
-                int defaultTaskRecordCount = 4;
-                string summary = String.Format(Resources.CopyBlobSummaryCount, total, finished, jobList.Count, failed);
-                ProgressRecord summaryRecord = new ProgressRecord(0, Resources.CopyBlobSummaryActivity, summary);
-                records.Add(summaryRecord);
+                await Channel.FetchBlobAttributesAsync(blob, accessCondition, options, OperationContext, CmdletCancellationToken);
 
-                int workerPtr = 0;
-                int taskRecordStartIndex = 1;
-
-                for (int i = 1; i <= jobList.Count; i++)
+                if (blob.CopyState == null)
                 {
-                    ProgressRecord record = new ProgressRecord(i % defaultTaskRecordCount + taskRecordStartIndex, Resources.CopyBlobActivity, Resources.CopyBlobActivity);
-                    records.Add(record);
+                    throw new ArgumentException(String.Format(Resources.CopyTaskNotFound, blob.Name, blob.Container.Name));
                 }
 
-                while (jobList.Count > 0)
+                if (blob.CopyState.Status == CopyStatus.Pending && waitForComplete)
                 {
-                    summary = String.Format(Resources.CopyBlobSummaryCount, total, finished, jobList.Count, failed);
-                    summaryRecord.StatusDescription = summary;
-                    WriteProgress(summaryRecord);
-
-                    for (int i = taskRecordStartIndex; i <= defaultTaskRecordCount && !IsCanceledOperation(); i++)
-                    {
-                        ICloudBlob blob = jobList[workerPtr];
-                        int recordIndex = workerPtr + taskRecordStartIndex;
-                        GetBlobWithCopyStatus(blob);
-                        WriteCopyProgress(blob, records[recordIndex]);
-                        UpdateTaskCount(blob.CopyState.Status);
-
-                        if (blob.CopyState.Status != CopyStatus.Pending)
-                        {
-                            WriteCopyState(blob);
-                            jobList.RemoveAt(workerPtr);
-                            records.RemoveAt(recordIndex);
-                        }
-                        else
-                        {
-                            workerPtr++;
-                        }
-
-                        if (jobList.Count == 0)
-                        {
-                            break;
-                        }
-
-                        if (workerPtr >= jobList.Count)
-                        {
-                            workerPtr = 0;
-                            break;
-                        }
-                    }
-
-                    if (IsCanceledOperation())
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        //status update interval
-                        int interval = 1 * 1000; //in millisecond
-                        Thread.Sleep(interval);
-                    }
+                    WriteCopyProgress(blob, record);
                 }
+                else
+                {
+                    OutputStream.WriteObject(taskId, blob.CopyState);
+                    break;
+                }
+
+                Thread.Sleep(WaitTimeout);
             }
-
-            base.EndProcessing();
+            while (true);
         }
     }
 }

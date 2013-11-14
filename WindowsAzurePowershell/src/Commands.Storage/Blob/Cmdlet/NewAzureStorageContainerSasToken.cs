@@ -82,6 +82,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         public NewAzureStorageContainerSasTokenCommand(IStorageBlobManagement channel)
         {
             Channel = channel;
+            EnableMultiThread = false;
         }
 
         /// <summary>

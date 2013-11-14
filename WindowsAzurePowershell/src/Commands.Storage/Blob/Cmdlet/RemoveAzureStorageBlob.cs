@@ -23,6 +23,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
     using Model.Contract;
+    using System.Threading.Tasks;
 
     [Cmdlet(VerbsCommon.Remove, StorageNouns.Blob, DefaultParameterSetName = NameParameterSet, SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High),
         OutputType(typeof(Boolean))]
@@ -147,13 +148,19 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             return false;
         }
 
+        internal async Task<bool> HasSnapshotAsync(ICloudBlob blob)
+        {
+            bool hasSnapshot = await Task.Factory.StartNew<bool>(() => HasSnapShot(blob), CmdletCancellationToken);
+            return hasSnapshot;
+        }
+
         /// <summary>
         /// remove the azure blob 
         /// </summary>
         /// <param name="blob">ICloudblob object</param>
         /// <param name="isValidBlob">whether the ICloudblob parameter is validated</param>
         /// <returns>true if the blob is removed successfully, false if user cancel the remove operation</returns>
-        internal bool RemoveAzureBlob(ICloudBlob blob, bool isValidBlob = false)
+        internal async Task RemoveAzureBlob(ICloudBlob blob, bool isValidBlob, long taskId)
         {
             if (!isValidBlob)
             {
@@ -163,6 +170,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             DeleteSnapshotsOption deleteSnapshotsOption = DeleteSnapshotsOption.None;
             AccessCondition accessCondition = null;
             BlobRequestOptions requestOptions = null;
+            string result = string.Empty;
 
             if (IsSnapshot(blob) && deleteSnapshot)
             {
@@ -173,26 +181,37 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             {
                 deleteSnapshotsOption = DeleteSnapshotsOption.DeleteSnapshotsOnly;
             }
-            else if (force)
-            {
-                deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
-            }
-            else if (HasSnapShot(blob))
-            {
-                string message = string.Format(Resources.ConfirmRemoveBlobWithSnapshot, blob.Name, blob.Container.Name);
+            //Will slow down performance 
+            //else if (await HasSnapshotAsync(blob))
+            //{
+            //    string message = string.Format(Resources.ConfirmRemoveBlobWithSnapshot, blob.Name, blob.Container.Name);
 
-                if (force || ConfirmRemove(message))
-                {
-                    deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
-                }
-                else
-                {
-                    return false;
-                }
+            //    if (force)
+            //    {
+            //        deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
+            //    }
+            //    else
+            //    {
+            //        result = String.Format(Resources.RemoveBlobCancelled, blob.Name, blob.Container.Name);
+            //        VerboseStream.WriteStream(result);
+            //    }
+            //}
+
+            await Channel.DeleteICloudBlobAsync(blob, deleteSnapshotsOption, accessCondition,
+                requestOptions, OperationContext, CmdletCancellationToken);
+
+            result = String.Format(Resources.RemoveBlobSuccessfully, blob.Name, blob.Container.Name);
+
+            if (VerboseStream != null)
+            {
+                //For unit test
+                VerboseStream.WriteStream(result);
             }
 
-            Channel.DeleteICloudBlob(blob, deleteSnapshotsOption, accessCondition, requestOptions, OperationContext);
-            return true;
+            if (PassThru)
+            {
+                OutputStream.WriteObject(taskId, true);
+            }
         }
 
         /// <summary>
@@ -201,7 +220,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="container">CloudBlobContainer object</param>
         /// <param name="blobName">blob name</param>
         /// <returns>true if the blob is removed successfully, false if user cancel the remove operation</returns>
-        internal bool RemoveAzureBlob(CloudBlobContainer container, string blobName)
+        internal async Task RemoveAzureBlob(CloudBlobContainer container, string blobName, long taskId)
         {
             if (!NameUtil.IsValidBlobName(blobName))
             {
@@ -211,7 +230,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             ValidatePipelineCloudBlobContainer(container);
             AccessCondition accessCondition = null;
             BlobRequestOptions requestOptions = null;
-            ICloudBlob blob = Channel.GetBlobReferenceFromServer(container, blobName, accessCondition, requestOptions, OperationContext);
+
+            ICloudBlob blob = await Channel.GetBlobReferenceFromServerAsync(container, blobName, accessCondition,
+                    requestOptions, OperationContext, CmdletCancellationToken);
 
             if (null == blob && container.ServiceClient.Credentials.IsSharedKey)
             {
@@ -224,7 +245,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                 blob = container.GetBlockBlobReference(blobName);
             }
 
-            return RemoveAzureBlob(blob, true);
+            await RemoveAzureBlob(blob, true, taskId);
         }
 
         /// <summary>
@@ -233,10 +254,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="containerName">container name</param>
         /// <param name="blobName">blob name</param>
         /// <returns>true if the blob is removed successfully, false if user cancel the remove operation</returns>
-        internal bool RemoveAzureBlob(string containerName, string blobName)
+        internal async Task RemoveAzureBlob(string containerName, string blobName, long taskId)
         {
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
-            return RemoveAzureBlob(container, blobName);
+            await RemoveAzureBlob(container, blobName, taskId);
         }
 
         /// <summary>
@@ -245,49 +266,27 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         [PermissionSet(SecurityAction.Demand, Name = "FullTrust")]
         public override void ExecuteCmdlet()
         {
-            string blobName = string.Empty;
-            string containerName = string.Empty;
-            bool removed = false;
+            Task task = null;
+            long taskId = GetAvailableTaskId();
+
 
             switch (ParameterSetName)
             {
                 case BlobPipelineParameterSet:
-                    removed = RemoveAzureBlob(ICloudBlob, false);
-                    blobName = ICloudBlob.Name;
-                    containerName = ICloudBlob.Container.Name;
+                    task = RemoveAzureBlob(ICloudBlob, false, taskId);
                     break;
 
                 case ContainerPipelineParmeterSet:
-                    removed = RemoveAzureBlob(CloudBlobContainer, BlobName);
-                    blobName = BlobName;
-                    containerName = ContainerName;
+                    task = RemoveAzureBlob(CloudBlobContainer, BlobName, taskId);
                     break;
 
                 case NameParameterSet:
                 default:
-                    removed = RemoveAzureBlob(ContainerName, BlobName);
-                    blobName = BlobName;
-                    containerName = ContainerName;
+                    task = RemoveAzureBlob(ContainerName, BlobName, taskId);
                     break;
             }
 
-            string result = string.Empty;
-
-            if (removed)
-            {
-                result = String.Format(Resources.RemoveBlobSuccessfully, blobName, containerName);
-            }
-            else
-            {
-                result = String.Format(Resources.RemoveBlobCancelled, blobName, containerName);
-            }
-
-            WriteVerbose(result);
-
-            if (PassThru)
-            {
-                WriteObject(removed);
-            }
+            RunConcurrentTask(task, taskId);
         }
     }
 }

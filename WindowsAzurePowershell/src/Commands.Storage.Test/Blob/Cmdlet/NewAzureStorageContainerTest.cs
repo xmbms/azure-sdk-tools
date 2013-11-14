@@ -17,7 +17,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
     using System;
     using System.Linq;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
-    using Commands.Test.Utilities.Common;
     using Model.ResourceModel;
     using Storage.Blob.Cmdlet;
     using Storage.Common;
@@ -32,7 +31,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
         {
             command = new NewAzureStorageContainerCommand(BlobMock)
                 {
-                    CommandRuntime = new MockCommandRuntime()
+                    CommandRuntime = MockCmdRunTime
                 };
         }
 
@@ -77,12 +76,12 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
             string name = String.Empty;
             string accesslevel = StorageNouns.ContainerAclOff;
 
-            ((MockCommandRuntime)command.CommandRuntime).ResetPipelines();
+            MockCmdRunTime.ResetPipelines();
             name = "test";
             AzureStorageContainer container = command.CreateAzureContainer(name, accesslevel);
             Assert.AreEqual("test", container.Name);
 
-            ((MockCommandRuntime)command.CommandRuntime).ResetPipelines();
+            MockCmdRunTime.ResetPipelines();
             AssertThrows<ResourceAlreadyExistException>(() => command.CreateAzureContainer(name, accesslevel),
                 String.Format(Resources.ContainerAlreadyExists, name));
         }
@@ -92,8 +91,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Blob
         {
             string name = "containername";
             command.Name = name;
-            command.ExecuteCmdlet();
-            AzureStorageContainer container = (AzureStorageContainer)((MockCommandRuntime)command.CommandRuntime).OutputPipeline.FirstOrDefault();
+            RunAsyncCommand(command, () => command.ExecuteCmdlet());
+            AzureStorageContainer container = (AzureStorageContainer) MockCmdRunTime.OutputPipeline.FirstOrDefault();
             Assert.AreEqual(name, container.Name);
         }
     }

@@ -489,7 +489,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         private void InitMultiThreadOutputStream()
         {
             OutputStream = new OrderedStreamWriter(WriteObject, WriteExceptionError);
-            VerboseStream = new UnorderedStreamWriter<string>(WriteVerboseWithTimestamp);
+            VerboseStream = new UnorderedStreamWriter<string>(WriteVerbose);
             ProgressStream = new UnorderedStreamWriter<ProgressRecord>(WriteProgress);
         }
 
@@ -501,6 +501,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             ConfigureServicePointManager();
             InitMultiThreadOutputStream();
             InitMutltiThreadResources();
+            TaskTotalCount = 0;
         }
 
         /// <summary>

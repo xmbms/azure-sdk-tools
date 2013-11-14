@@ -18,6 +18,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
     using System.Management.Automation;
     using System.Net;
     using System.Threading;
+    using Microsoft.WindowsAzure.Commands.Storage.Common;
+    using Microsoft.WindowsAzure.Commands.Storage.Utilities;
+    using Microsoft.WindowsAzure.Management.Storage.Blob;
     using Microsoft.WindowsAzure.Storage.DataMovement;
 
     public class StorageDataMovementCmdletBase : StorageCloudBlobCmdletBase, IDisposable
@@ -26,16 +29,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// Amount of concurrent async tasks to run per available core.
         /// </summary>
         protected int concurrentTaskCount = 0;
-
-        /// <summary>
-        /// whether the transfer progress finished
-        /// </summary>
-        private bool finished;
-
-        /// <summary>
-        /// exception thrown during transfer
-        /// </summary>
-        private Exception runtimeException;
 
         /// <summary>
         /// Blob Transfer Manager
@@ -54,13 +47,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             set { overwrite = value; }
         }
         protected bool overwrite;
-
-        /// <summary>
-        /// Copy task count
-        /// </summary>
-        private int TotalCount = 0;
-        private int FailedCount = 0;
-        private int FinishedCount = 0;
 
         /// <summary>
         /// Size formats
@@ -106,26 +92,29 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         }
 
         /// <summary>
-        /// Configure Service Point
-        /// </summary>
-        private void ConfigureServicePointManager()
-        {
-            ServicePointManager.DefaultConnectionLimit = concurrentTaskCount;
-            ServicePointManager.Expect100Continue = false;
-            ServicePointManager.UseNagleAlgorithm = true;
-        }
-
-        /// <summary>
         /// on download start
         /// </summary>
         /// <param name="progress">progress information</param>
-        internal virtual void OnTaskStart(object progress)
+        internal virtual void OnTaskStart(object data)
         {
-            ProgressRecord pr = progress as ProgressRecord;
+            if (IsCanceledOperation())
+            {
+                return;
+            }
+
+            DataMovementUserData userData = data as DataMovementUserData;
+
+            if (null == userData)
+            {
+                return;
+            }
+
+            ProgressRecord pr = userData.Record;
 
             if (null != pr)
             {
                 pr.PercentComplete = 0;
+                ProgressStream.WriteStream(pr);
             }
         }
 
@@ -135,17 +124,25 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="progress">progress information</param>
         /// <param name="speed">download speed</param>
         /// <param name="percent">download percent</param>
-        internal virtual void OnTaskProgress(object progress, double speed, double percent)
+        internal virtual void OnTaskProgress(object data, double speed, double percent)
         {
-            ProgressRecord pr = progress as ProgressRecord;
-
-            if (null == pr)
+            if (IsCanceledOperation())
             {
                 return;
             }
 
+            DataMovementUserData userData = data as DataMovementUserData;
+
+            if (null == userData)
+            {
+                return;
+            }
+
+            ProgressRecord pr = userData.Record;
+
             pr.PercentComplete = (int)percent;
-            pr.StatusDescription = String.Format(Resources.FileTransmitStatus, pr.PercentComplete, BytesToHumanReadableSize(speed));
+            pr.StatusDescription = String.Format(Resources.FileTransmitStatus, pr.PercentComplete, Util.BytesToHumanReadableSize(speed));
+            ProgressStream.WriteStream(pr);
         }
 
         /// <summary>
@@ -153,101 +150,93 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// </summary>
         /// <param name="progress">progress information</param>
         /// <param name="e">run time exception</param>
-        internal virtual void OnTaskFinish(object progress, Exception e)
+        internal virtual void OnTaskFinish(object data, Exception e)
         {
-            finished = true;
-            runtimeException = e;
-
-            ProgressRecord pr = progress as ProgressRecord;
-
-            if (null == pr)
+            try
             {
-                return;
+                if (IsCanceledOperation())
+                {
+                    return;
+                }
+
+                DataMovementUserData userData = data as DataMovementUserData;
+
+                string status = string.Empty;
+
+                if (null == e)
+                {
+                    Interlocked.Increment(ref TaskFinishedCount);
+                    status = Resources.TransmitSuccessfully;
+                    OnTaskSuccessful(userData);
+                }
+                else
+                {
+                    Interlocked.Increment(ref TaskFailedCount);
+                    status = String.Format(Resources.TransmitFailed, e.Message);
+                    OutputStream.WriteError(userData.TaskId, e);
+                }
+
+                if (userData != null && userData.Record != null)
+                {
+                    if (e == null)
+                    {
+                        userData.Record.PercentComplete = 100;
+                    }
+
+                    userData.Record.StatusDescription = status;
+                    ProgressStream.WriteStream(userData.Record);
+                }
             }
-
-            pr.PercentComplete = 100;
-
-            if (null == e)
+            finally
             {
-                pr.StatusDescription = Resources.TransmitSuccessfully;
-            }
-            else
-            {
-                pr.StatusDescription = String.Format(Resources.TransmitFailed, e.Message);
+                TaskCounter.Signal();
             }
         }
 
         /// <summary>
-        /// Cmdlet begin processing
+        /// On Task run successfully
+        /// </summary>
+        /// <param name="data">User data</param>
+        protected virtual void OnTaskSuccessful(DataMovementUserData data)
+        { }
+
+        /// <summary>
+        /// Begin processing
         /// </summary>
         protected override void BeginProcessing()
         {
-            if (concurrentTaskCount == 0)
-            {
-                concurrentTaskCount = Environment.ProcessorCount * asyncTasksPerCoreMultiplier;
-            }
-            
-            ConfigureServicePointManager();
+            base.BeginProcessing();
 
             BlobTransferOptions opts = new BlobTransferOptions();
-            opts.Concurrency = concurrentTaskCount;
+            opts.Concurrency = GetCmdletConcurrency();
+            opts.AppendToClientRequestId(CmdletOperationContext.ClientRequestId);
             transferManager = new BlobTransferManager(opts);
-            
-            base.BeginProcessing();
+
+            CmdletCancellationToken.Register(() => transferManager.CancelWorkAndWaitForCompletion());
         }
 
         /// <summary>
-        /// Cmdlet end processing
+        /// Start async task in transfer manager
         /// </summary>
-        protected override void EndProcessing()
-        {
-            WriteVerbose(String.Format(Resources.TransferSummary, TotalCount, FinishedCount, FailedCount));
-
-            base.EndProcessing();
-        }
-
-        /// <summary>
-        /// Start sync task using transfermanager from datamovement library.
-        /// </summary>
-        /// <param name="taskAction"></param>
+        /// <param name="taskStartAction">Task  start action</param>
         /// <param name="record"></param>
-        protected void StartSyncTaskInTransferManager(Action<BlobTransferManager> taskAction, ProgressRecord record = null)
+        protected void StartAsyncTaskInTransferManager(Action<BlobTransferManager> taskStartAction)
         {
-            finished = false;
-            TotalCount++;
+            TaskTotalCount++;
 
-            //status update interval
-            int interval = 1 * 1000; //in millisecond
+            TaskCounter.AddCount();
 
-            taskAction(transferManager);
-
-            while (!finished)
+            try
             {
-                if (record != null)
-                {
-                    WriteProgress(record);
-                }
-
-                Thread.Sleep(interval);
-                if (IsCanceledOperation())
-                {
-                    //can't output verbose log for this operation since the Output stream is already stopped.
-                    transferManager.CancelWork();
-                    transferManager.WaitForCompletion();
-                    break;
-                }
+                taskStartAction(transferManager);
+            }
+            catch
+            {
+                TaskCounter.Signal();
+                throw;
             }
 
-            if (runtimeException != null)
-            {
-                FailedCount++;
-                RuntimeException rtException = new RuntimeException(runtimeException.Message, runtimeException);
-                throw rtException;
-            }
-            else
-            {
-                FinishedCount++;
-            }
+            GatherStreamToMainThread();
         }
 
         /// <summary>

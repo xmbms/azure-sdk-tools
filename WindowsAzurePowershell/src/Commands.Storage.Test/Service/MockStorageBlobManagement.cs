@@ -438,5 +438,66 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
             return Task.Factory.StartNew(() => this.GetContainerPermissions(container,
                 accessCondition, options, operationContext));
         }
+
+
+        public Task<bool> DoesContainerExistAsync(CloudBlobContainer container, BlobRequestOptions requestOptions,
+            OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.DoesContainerExist(container, requestOptions, operationContext));
+        }
+
+        public Task<ICloudBlob> GetBlobReferenceFromServerAsync(CloudBlobContainer container, string blobName,
+            AccessCondition accessCondition, BlobRequestOptions options, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(()=> this.GetBlobReferenceFromServer(container, blobName, accessCondition, options, operationContext));
+        }
+
+        public Task FetchBlobAttributesAsync(ICloudBlob blob, AccessCondition accessCondition, BlobRequestOptions options,
+            OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.FetchBlobAttributes(blob, accessCondition, options, operationContext));
+        }
+
+        public Task<bool> CreateContainerIfNotExistsAsync(CloudBlobContainer container, BlobContainerPublicAccessType accessType,
+            BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.CreateContainerIfNotExists(container, requestOptions, operationContext));
+        }
+
+        public Task DeleteContainerAsync(CloudBlobContainer container, AccessCondition accessCondition,
+            BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.DeleteContainer(container, accessCondition, requestOptions, operationContext));
+        }
+
+        public Task AbortCopyAsync(ICloudBlob blob, string abortCopyId, AccessCondition accessCondition,
+            BlobRequestOptions abortRequestOption, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.AbortCopy(blob, abortCopyId, accessCondition, abortRequestOption, operationContext));
+        }
+
+        public Task SetContainerPermissionsAsync(CloudBlobContainer container, BlobContainerPermissions permissions,
+            AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.SetContainerPermissions(container, permissions, accessCondition, requestOptions, operationContext));
+        }
+
+        public Task DeleteICloudBlobAsync(ICloudBlob blob, DeleteSnapshotsOption deleteSnapshotsOption,
+            AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.DeleteICloudBlob(blob, deleteSnapshotsOption, accessCondition, requestOptions, operationContext));
+        }
+
+        public Task SetBlobMetadataAsync(ICloudBlob blob, System.Collections.Hashtable BlobMetadata,
+            AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.SetBlobMetadata(blob, accessCondition, requestOptions, operationContext));
+        }
+
+        public Task SetBlobPropertiesAsync(ICloudBlob blob, System.Collections.Hashtable BlobProperties,
+            AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return Task.Factory.StartNew(() => this.SetBlobProperties(blob, accessCondition, requestOptions, operationContext));
+        }
     }
 }
