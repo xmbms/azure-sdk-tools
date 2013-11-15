@@ -15,6 +15,7 @@
 namespace Microsoft.WindowsAzure.Commands.Storage.Common
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Management.Automation;
@@ -419,6 +420,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         protected long TaskFinishedCount = 0;
 
         /// <summary>
+        /// Task status
+        /// Key: Output id
+        /// Value: Task is done or not.
+        /// </summary>
+        private ConcurrentDictionary<long, bool> TaskStatus;
+
+        /// <summary>
         /// Get available task id
         ///     thread unsafe since it should only run in main thread
         /// </summary>
@@ -481,6 +489,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                 TaskFinishedCount, TaskFailedCount, TaskTotalCount);
             summaryRecord = new ProgressRecord(summaryRecordId, Resources.TransmitActivity, summary);
             limitedConcurrency = new SemaphoreSlim(GetCmdletConcurrency());
+            TaskStatus = new ConcurrentDictionary<long, bool>();
         }
 
         /// <summary>
@@ -488,7 +497,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// </summary>
         private void InitMultiThreadOutputStream()
         {
-            OutputStream = new OrderedStreamWriter(WriteObject, WriteExceptionError);
+            OutputStream = new OrderedStreamWriter(WriteObject, WriteExceptionError, TaskStatus);
             VerboseStream = new UnorderedStreamWriter<string>(WriteVerbose);
             ProgressStream = new UnorderedStreamWriter<ProgressRecord>(WriteProgress);
         }
@@ -499,8 +508,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         internal void SetUpMultiThreadEnvironment()
         {
             ConfigureServicePointManager();
-            InitMultiThreadOutputStream();
             InitMutltiThreadResources();
+            InitMultiThreadOutputStream();
             TaskTotalCount = 0;
         }
 
@@ -545,9 +554,12 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             //So there is no need to limit the amount of concurrent tasks.
             TaskTotalCount++;
             TaskCounter.AddCount();
+            bool initTaskStatus = false;
+            bool finishedTaskStatus = true;
 
             try
             {
+                TaskStatus.TryAdd(taskId, initTaskStatus);
                 limitedConcurrency.Wait(CmdletCancellationToken);
                 await task;
                 Interlocked.Increment(ref TaskFinishedCount);
@@ -559,6 +571,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             }
             finally
             {
+                TaskStatus.TryUpdate(taskId, finishedTaskStatus, initTaskStatus);
                 limitedConcurrency.Release();
                 TaskCounter.Signal();
             }

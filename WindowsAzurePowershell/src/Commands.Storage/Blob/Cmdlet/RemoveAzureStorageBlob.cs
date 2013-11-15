@@ -181,6 +181,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             {
                 deleteSnapshotsOption = DeleteSnapshotsOption.DeleteSnapshotsOnly;
             }
+            else if (force)
+            {
+                deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
+            }
             //Will slow down performance 
             //else if (await HasSnapshotAsync(blob))
             //{

@@ -119,7 +119,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             BlobRequestOptions requestOptions = null;
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
 
-            if (!skipCheckExists && !await Channel.DoesContainerExistAsync(container, requestOptions, OperationContext, CmdletCancellationToken))
+            if (!skipCheckExists && container.ServiceClient.Credentials.IsSharedKey
+                && !await Channel.DoesContainerExistAsync(container, requestOptions, OperationContext, CmdletCancellationToken))
             {
                 throw new ArgumentException(String.Format(Resources.ContainerNotFound, containerName));
             }
@@ -142,7 +143,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
 
             bool useFlatBlobListing = true;
             string prefix = string.Empty;
-            OutputStream.LockStream(taskId);
+            //OutputStream.LockStream(taskId);
             BlobListingDetails details = BlobListingDetails.Snapshots | BlobListingDetails.Metadata | BlobListingDetails.Copy;
 
             if (String.IsNullOrEmpty(blobName) || WildcardPattern.ContainsWildcardCharacters(blobName))
@@ -194,7 +195,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                 }
             }
 
-            OutputStream.UnLockStream(taskId);
+            //OutputStream.UnLockStream(taskId);
         }
 
         /// <summary>
@@ -206,7 +207,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         internal async Task ListBlobsByPrefix(string containerName, string prefix,
             AzureStorageContext context, long taskId)
         {
-            OutputStream.LockStream(taskId);
+            //OutputStream.LockStream(taskId);
 
             CloudBlobContainer container = await GetCloudBlobContainerByName(containerName);
 
@@ -229,7 +230,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                 WriteBlobsWithContext(taskId, context, blob);
             }
 
-            OutputStream.UnLockStream(taskId);
+            //OutputStream.UnLockStream(taskId);
         }
 
         /// <summary>

@@ -40,15 +40,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// Current output id
         /// </summary>
         private long CurrentOutputId;
-
-        /// <summary>
-        /// Locked output id.
-        /// The output unit may be too large to output at only one time,
-        /// so we have to lock the output id till the output is done.
-        /// Key: Output id
-        /// Value: the bool indicates whether to lock the output id.
-        /// </summary>
-        private Lazy<ConcurrentDictionary<long, bool>> LockedStream;
         
         /// <summary>
         /// Main thread output writer. WriteObject is a good candidate for it.
@@ -61,36 +52,25 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         private Action<Exception> ErrorWriter;
 
         /// <summary>
+        /// Task status
+        /// Key: Output id
+        /// Value: Task is done or not.
+        /// </summary>
+        private ConcurrentDictionary<long, bool> TaskStatus;
+
+        /// <summary>
         /// Create an OrderedStreamWriter
         /// </summary>
         /// <param name="outputWriter">Main thread output writer</param>
         /// <param name="errorWriter">Main thread error writer</param>
-        public OrderedStreamWriter(Action<object> outputWriter, Action<Exception> errorWriter)
+        public OrderedStreamWriter(Action<object> outputWriter, Action<Exception> errorWriter,
+            ConcurrentDictionary<long, bool> taskStatus)
         {
             OutputWriter = outputWriter;
             ErrorWriter = errorWriter;
             OutputStream = new ConcurrentDictionary<long, OutputUnit>();
-            LockedStream = new Lazy<ConcurrentDictionary<long, bool>>();
             CurrentOutputId = 0;
-        }
-
-        /// <summary>
-        /// Lock the output stream in order to work with IEnumerable
-        /// </summary>
-        /// <param name="id">The output id</param>
-        public void LockStream(long id)
-        {
-            LockedStream.Value.TryAdd(id, false);
-        }
-
-        /// <summary>
-        /// Unlock the output stream
-        /// </summary>
-        /// <param name="id">The output id</param>
-        public void UnLockStream(long id)
-        {
-            bool trivialState = false;
-            LockedStream.Value.TryRemove(id, out trivialState);
+            TaskStatus = taskStatus;
         }
 
         /// <summary>
@@ -142,9 +122,12 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         {
             OutputUnit unit = null;
             bool removed = false;
-
+            bool taskDone = false;
+            bool existed = false;
             do
             {
+                existed = TaskStatus.TryGetValue(CurrentOutputId, out taskDone);
+
                 removed = OutputStream.TryRemove(CurrentOutputId, out unit);
 
                 if (removed)
@@ -175,12 +158,12 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                         Debug.Fail(String.Format("{0}", e));
                         break;
                     }
-
-                    if (!LockedStream.IsValueCreated || !LockedStream.Value.ContainsKey(CurrentOutputId))
-                    {
-                        CurrentOutputId++;
-                    }
                 }
+
+                if (existed && taskDone)
+                {
+                    CurrentOutputId++;
+                } //Otherwise wait for the task completion
             }
             while (removed);
         }
