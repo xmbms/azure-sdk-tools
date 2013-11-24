@@ -291,6 +291,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             }
 
             RunConcurrentTask(task, taskId);
+
         }
     }
 }

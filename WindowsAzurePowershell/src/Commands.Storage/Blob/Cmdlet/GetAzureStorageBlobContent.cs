@@ -160,6 +160,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             BlobRequestOptions requestOptions = null;
             AccessCondition accessCondition = null;
 
+            //FIXME
             ICloudBlob blob = Channel.GetBlobReferenceFromServer(container, blobName, accessCondition, requestOptions, OperationContext);
                 
             if (null == blob)
@@ -244,14 +245,15 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
                 Directory.CreateDirectory(dirPath);
             }
 
-            AccessCondition accessCondition = null;
-            BlobRequestOptions requestOptions = null;
+            //FIXME
+            //AccessCondition accessCondition = null;
+            //BlobRequestOptions requestOptions = null;
 
             try
             {
                 DownloadBlob(blob, filePath);
-
-                Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
+                //FIXME
+                //Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
             }
             catch (Exception e)
             {

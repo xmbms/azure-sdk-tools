@@ -353,10 +353,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                 ValidatePipelineCloudBlobContainer(blob.Container);
             }
 
-            AccessCondition accessCondition = null;
-            BlobRequestOptions requestOptions = null;
-            ICloudBlob blobRef = Channel.GetBlobReferenceFromServer(blob.Container, blob.Name, accessCondition, requestOptions, OperationContext);
-
+            //FIXME GetBlobReferenceFromServerAsync
+            //AccessCondition accessCondition = null;
+            //BlobRequestOptions requestOptions = null;
+            //ICloudBlob blobRef = Channel.GetBlobReferenceFromServer(blob.Container, blob.Name, accessCondition, requestOptions, OperationContext);
+            ICloudBlob blobRef = null;
             if (null != blobRef)
             {
                 if (blob.BlobType != blobRef.BlobType)
@@ -379,7 +380,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
 
                 try
                 {
-                    Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
+                //FXI
+                //    Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
                 }
                 catch (StorageException se)
                 {

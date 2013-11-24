@@ -15,6 +15,7 @@
 namespace Microsoft.WindowsAzure.Commands.Storage
 {
     using System;
+    using System.Threading.Tasks;
     using Common;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Blob;
@@ -43,11 +44,21 @@ namespace Microsoft.WindowsAzure.Commands.Storage
             Channel = channel;
         }
 
+        internal void ValidatePipelineICloudBlob(ICloudBlob blob)
+        {
+            //FIXME
+        }
+
+        internal void ValidatePipelineCloudBlobContainer(CloudBlobContainer container)
+        {
+            //FIXME
+        }
+
         /// <summary>
         /// Make sure the pipeline blob is valid and already existing
         /// </summary>
         /// <param name="blob">ICloudBlob object</param>
-        internal void ValidatePipelineICloudBlob(ICloudBlob blob)
+        internal async Task ValidatePipelineICloudBlobAsync(ICloudBlob blob)
         {
             if (null == blob)
             {
@@ -59,10 +70,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage
                 throw new ArgumentException(String.Format(Resources.InvalidBlobName, blob.Name));
             }
 
-            ValidatePipelineCloudBlobContainer(blob.Container);
+            await ValidatePipelineCloudBlobContainerAsync(blob.Container);
             BlobRequestOptions requestOptions = null;
 
-            if (!Channel.DoesBlobExist(blob, requestOptions, OperationContext))
+            if (! await Channel.DoesBlobExistAsync(blob, requestOptions, OperationContext, CmdletCancellationToken))
             {
                 throw new ResourceNotFoundException(String.Format(Resources.BlobNotFound, blob.Name, blob.Container.Name));
             }
@@ -72,7 +83,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage
         /// Make sure the container is valid and already existing 
         /// </summary>
         /// <param name="container">A CloudBlobContainer object</param>
-        internal void ValidatePipelineCloudBlobContainer(CloudBlobContainer container)
+        internal async Task ValidatePipelineCloudBlobContainerAsync(CloudBlobContainer container)
         {
             if (null == container)
             {
@@ -87,7 +98,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage
             BlobRequestOptions requestOptions = null;
 
             if (container.ServiceClient.Credentials.IsSharedKey 
-                && !Channel.DoesContainerExist(container, requestOptions, OperationContext))
+                && !await Channel.DoesContainerExistAsync(container, requestOptions, OperationContext, CmdletCancellationToken))
             {
                 throw new ResourceNotFoundException(String.Format(Resources.ContainerNotFound, container.Name));
             }

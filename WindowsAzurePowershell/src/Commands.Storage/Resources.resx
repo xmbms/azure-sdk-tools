@@ -609,7 +609,8 @@ Failed: {2}.</value>
     <comment>0 for total task count, 1 for successful count, 2 for failed count, 3 for active count.</comment>
   </data>
   <data name="TransmitActivity" xml:space="preserve">
-    <value>Transmit Status</value>
+    <value>{0} task status :</value>
+    <comment>0 for cmdlet name.</comment>
   </data>
   <data name="BlobTransmitCanceled" xml:space="preserve">
     <value>Transmission for blob '{0}' in container '{1}' is canceled.</value>

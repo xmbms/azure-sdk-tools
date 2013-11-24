@@ -487,7 +487,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             int summaryRecordId = 0;
             string summary = String.Format(Resources.TransmitActiveSummary, TaskTotalCount,
                 TaskFinishedCount, TaskFailedCount, TaskTotalCount);
-            summaryRecord = new ProgressRecord(summaryRecordId, Resources.TransmitActivity, summary);
+            string activity = string.Format(Resources.TransmitActivity, this.MyInvocation.MyCommand);
+            summaryRecord = new ProgressRecord(summaryRecordId, activity, summary);
             limitedConcurrency = new SemaphoreSlim(GetCmdletConcurrency());
             TaskStatus = new ConcurrentDictionary<long, bool>();
         }
@@ -552,6 +553,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             //Most Tasks do the web requests.
             //ServicePointManager.DefaultConnectionLimit will limit the max connection.
             //So there is no need to limit the amount of concurrent tasks.
+            //FIXME remove the description above.
             TaskTotalCount++;
             TaskCounter.AddCount();
             bool initTaskStatus = false;

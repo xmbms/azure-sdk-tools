@@ -344,12 +344,19 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Model.Contract
 
         public Task SetBlobMetadataAsync(ICloudBlob blob, System.Collections.Hashtable BlobMetadata, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext OperationContext, CancellationToken CmdletCancellationToken)
         {
-            throw new System.NotImplementedException();
+            return blob.SetMetadataAsync(accessCondition, requestOptions, OperationContext, CmdletCancellationToken);
         }
 
+        //FIXME remove hashtable parameter
         public Task SetBlobPropertiesAsync(ICloudBlob blob, System.Collections.Hashtable BlobProperties, AccessCondition accessCondition, BlobRequestOptions requestOptions, OperationContext OperationContext, CancellationToken CmdletCancellationToken)
         {
-            throw new System.NotImplementedException();
+            return blob.SetPropertiesAsync(accessCondition, requestOptions, OperationContext, CmdletCancellationToken);
+        }
+
+
+        public Task<bool> DoesBlobExistAsync(ICloudBlob blob, BlobRequestOptions options, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            return blob.ExistsAsync(options, operationContext, cmdletCancellationToken);
         }
     }
 }

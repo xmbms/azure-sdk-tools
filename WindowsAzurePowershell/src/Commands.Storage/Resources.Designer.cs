@@ -1253,7 +1253,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Transmit Status.
+        ///   Looks up a localized string similar to {0} task status :.
         /// </summary>
         internal static string TransmitActivity {
             get {

@@ -499,5 +499,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Test.Service
         {
             return Task.Factory.StartNew(() => this.SetBlobProperties(blob, accessCondition, requestOptions, operationContext));
         }
+
+
+        public Task<bool> DoesBlobExistAsync(ICloudBlob blob, BlobRequestOptions options, OperationContext operationContext, CancellationToken cmdletCancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
