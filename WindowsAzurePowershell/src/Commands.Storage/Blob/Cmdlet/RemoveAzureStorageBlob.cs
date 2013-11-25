@@ -118,43 +118,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         }
 
         /// <summary>
-        /// check whether specified blob has snapshot
-        /// </summary>
-        /// <param name="blob">ICloudBlob object</param>
-        /// <returns>true if the specified blob has snapshot, otherwise false</returns>
-        internal bool HasSnapShot(ICloudBlob blob)
-        {
-            BlobListingDetails details = BlobListingDetails.Snapshots;
-            BlobRequestOptions requestOptions = null;
-            bool useFlatBlobListing = true;
-
-            if (IsSnapshot(blob)) //snapshot can't have snapshot
-            {
-                return false;
-            }
-
-            IEnumerable<IListBlobItem> snapshots = Channel.ListBlobs(blob.Container, blob.Name, useFlatBlobListing, details, requestOptions, OperationContext);
-
-            foreach (IListBlobItem item in snapshots)
-            {
-                ICloudBlob blobItem = item as ICloudBlob;
-
-                if (blobItem != null && blobItem.Name == blob.Name && blobItem.SnapshotTime != null)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        internal async Task<bool> HasSnapshotAsync(ICloudBlob blob)
-        {
-            bool hasSnapshot = await Task.Factory.StartNew<bool>(() => HasSnapShot(blob), CmdletCancellationToken);
-            return hasSnapshot;
-        }
-
-        /// <summary>
         /// remove the azure blob 
         /// </summary>
         /// <param name="blob">ICloudblob object</param>
@@ -168,43 +131,75 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             }
 
             DeleteSnapshotsOption deleteSnapshotsOption = DeleteSnapshotsOption.None;
+            bool retryDeleteSnapshot = false;
+
+            if (IsSnapshot(blob))
+            {
+                if (deleteSnapshot)
+                {
+                    throw new ArgumentException(String.Format(Resources.CannotDeleteSnapshotForSnapshot, blob.Name, blob.SnapshotTime));
+                }
+            }
+            else
+            {
+                if (deleteSnapshot)
+                {
+                    deleteSnapshotsOption = DeleteSnapshotsOption.DeleteSnapshotsOnly;
+                }
+                else if (force)
+                {
+                    deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
+                }
+                else
+                {
+                    retryDeleteSnapshot = true;
+                }
+            }
+
+            try
+            {
+                await DeleteICloudAsync(taskId, blob, deleteSnapshotsOption);
+                retryDeleteSnapshot = false;
+            }
+            catch (StorageException e)
+            {
+                if (e.IsConflictException() && retryDeleteSnapshot)
+                {
+                    //If x-ms-delete-snapshots is not specified on the request and the blob has associated snapshots, the Blob service returns status code 409 (Conflict).
+                    retryDeleteSnapshot = true;
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            if (retryDeleteSnapshot)
+            {
+                string message = string.Format(Resources.ConfirmRemoveBlobWithSnapshot, blob.Name, blob.Container.Name);
+
+                if (await ConfirmAsyc(message))
+                {
+                    deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
+                    await DeleteICloudAsync(taskId, blob, deleteSnapshotsOption);
+                }
+                else
+                {
+                    string result = String.Format(Resources.RemoveBlobCancelled, blob.Name, blob.Container.Name);
+                    VerboseStream.WriteStream(result);
+                }
+            }
+        }
+
+        internal async Task DeleteICloudAsync(long taskId, ICloudBlob blob, DeleteSnapshotsOption deleteSnapshotsOption)
+        {
             AccessCondition accessCondition = null;
             BlobRequestOptions requestOptions = null;
-            string result = string.Empty;
-
-            if (IsSnapshot(blob) && deleteSnapshot)
-            {
-                throw new ArgumentException(String.Format(Resources.CannotDeleteSnapshotForSnapshot, blob.Name, blob.SnapshotTime));
-            }
-
-            if (deleteSnapshot)
-            {
-                deleteSnapshotsOption = DeleteSnapshotsOption.DeleteSnapshotsOnly;
-            }
-            else if (force)
-            {
-                deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
-            }
-            //Will slow down performance 
-            //else if (await HasSnapshotAsync(blob))
-            //{
-            //    string message = string.Format(Resources.ConfirmRemoveBlobWithSnapshot, blob.Name, blob.Container.Name);
-
-            //    if (force)
-            //    {
-            //        deleteSnapshotsOption = DeleteSnapshotsOption.IncludeSnapshots;
-            //    }
-            //    else
-            //    {
-            //        result = String.Format(Resources.RemoveBlobCancelled, blob.Name, blob.Container.Name);
-            //        VerboseStream.WriteStream(result);
-            //    }
-            //}
 
             await Channel.DeleteICloudBlobAsync(blob, deleteSnapshotsOption, accessCondition,
-                requestOptions, OperationContext, CmdletCancellationToken);
+                    requestOptions, OperationContext, CmdletCancellationToken);
 
-            result = String.Format(Resources.RemoveBlobSuccessfully, blob.Name, blob.Container.Name);
+            string result = String.Format(Resources.RemoveBlobSuccessfully, blob.Name, blob.Container.Name);
 
             if (VerboseStream != null)
             {
@@ -291,7 +286,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             }
 
             RunConcurrentTask(task, taskId);
-
         }
     }
 }

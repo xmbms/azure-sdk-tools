@@ -51,8 +51,42 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             get
             {
                 return CmdletOperationContext.GetStorageOperationContext(WriteDebugLog);
-            }    
+            }
         }
+
+        #region sync confirm to async
+        /// <summary>
+        /// The operation that should be confirmed by user.
+        /// </summary>
+        private Lazy<ConcurrentQueue<ConfirmTaskCompletionSource>> ConfirmQueue = new Lazy<ConcurrentQueue<ConfirmTaskCompletionSource>>(
+            () => new ConcurrentQueue<ConfirmTaskCompletionSource>(), true);
+
+        protected Task<bool> ConfirmAsyc(string processTarget)
+        {
+            ConfirmTaskCompletionSource tcs = new ConfirmTaskCompletionSource(processTarget);
+            ConfirmQueue.Value.Enqueue(tcs);
+            return tcs.Task;
+        }
+
+        internal void ConfirmRequest(ConfirmTaskCompletionSource tcs)
+        {
+            bool result = ShouldProcess(string.Empty, tcs.Message, Resources.ConfirmCaption);
+            tcs.SetResult(result);
+        }
+
+        protected void ConfirmQueuedRequest()
+        {
+            if (ConfirmQueue.IsValueCreated)
+            {
+                ConfirmTaskCompletionSource tcs = null;
+                while (ConfirmQueue.Value.TryDequeue(out tcs))
+                {
+                    ConfirmRequest(tcs);
+                }
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// Write log in debug mode
@@ -406,7 +440,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// <summary>
         /// Active task counter
         /// </summary>
-        protected CountdownEvent TaskCounter;
+        private CountdownEvent TaskCounter;
 
         //CountDownEvent wait time out and output time interval.
         protected const int WaitTimeout = 1000;//ms
@@ -415,9 +449,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// Task number counter
         ///     The following counter should be used with Interlocked
         /// </summary>
-        protected long TaskTotalCount = 0;
-        protected long TaskFailedCount = 0;
-        protected long TaskFinishedCount = 0;
+        private long TaskTotalCount = 0;
+        private long TaskFailedCount = 0;
+        private long TaskFinishedCount = 0;
 
         /// <summary>
         /// Task status
@@ -520,6 +554,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         protected virtual void GatherStreamToMainThread(bool isEndProcessing = false)
         {
             WriteTransmitSummaryStatus(isEndProcessing);
+            ConfirmQueuedRequest();
             ProgressStream.Output();
             VerboseStream.Output();
             OutputStream.Output();
@@ -562,8 +597,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             try
             {
                 TaskStatus.TryAdd(taskId, initTaskStatus);
-                limitedConcurrency.Wait(CmdletCancellationToken);
-                await task;
+                //FIXME this wil cause the dead lock
+                //When limitedConcurrency = 0, the main thread will be blocked and can't responsd to user interface.
+                //Please try set-azurestorageblobcontent to reproduce.
+                //limitedConcurrency.Wait(CmdletCancellationToken);
+                await task.ConfigureAwait(false);
                 Interlocked.Increment(ref TaskFinishedCount);
             }
             catch (Exception e)
@@ -574,7 +612,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             finally
             {
                 TaskStatus.TryUpdate(taskId, finishedTaskStatus, initTaskStatus);
-                limitedConcurrency.Release();
+                //limitedConcurrency.Release();
                 TaskCounter.Signal();
             }
         }

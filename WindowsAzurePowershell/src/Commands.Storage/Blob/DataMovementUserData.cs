@@ -19,6 +19,7 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
     using System.Linq;
     using System.Management.Automation;
     using System.Text;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// User data for data movement library
@@ -28,5 +29,11 @@ namespace Microsoft.WindowsAzure.Management.Storage.Blob
         public object Data;
         public ProgressRecord Record;
         public long TaskId;
+        public TaskCompletionSource<bool> taskSource;
+        
+        public DataMovementUserData()
+        {
+            taskSource = new TaskCompletionSource<bool>();
+        }
     }
 }

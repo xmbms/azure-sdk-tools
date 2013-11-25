@@ -373,8 +373,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             };
 
             //There is no need to use progress record for start-copy
-            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueBlobStartCopy(blob, destContainer, destBlobName, null, OnCopyTaskFinish, data);
-            StartAsyncTaskInTransferManager(taskAction);
+            transferManager.QueueBlobStartCopy(blob, destContainer, destBlobName, null, OnCopyTaskFinish, data);
+            RunConcurrentTask(data.taskSource.Task, data.TaskId);
             return true;
         }
 
@@ -404,8 +404,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             };
 
             //There is no need to use progress record for start-copy
-            Action<BlobTransferManager> taskAction = (transferManager) => transferManager.QueueBlobStartCopy(uri, destContainer, destBlobName, null, OnCopyTaskFinish, data);
-            StartAsyncTaskInTransferManager(taskAction);
+            transferManager.QueueBlobStartCopy(uri, destContainer, destBlobName, null, OnCopyTaskFinish, data);
+            RunConcurrentTask(data.taskSource.Task, data.TaskId);
             return true;
         }
 

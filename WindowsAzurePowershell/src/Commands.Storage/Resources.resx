@@ -224,7 +224,7 @@
     <value>Blob type mismatched, the current blob type of '{0}' is {1}.</value>
   </data>
   <data name="CannotSendDirectory" xml:space="preserve">
-    <value>Can not send the directory '{0}' to azure. If you want to send directory to azure, please use "ls -File | Set-AzureStorageBlobContent -Container containerName".</value>
+    <value>Can not send the directory '{0}' to azure. If you want to send directory to azure, please use "ls -File  -Recurse | Set-AzureStorageBlobContent -Container containerName".</value>
   </data>
   <data name="PrepareUploadingBlob" xml:space="preserve">
     <value>Prepare to upload blob.</value>
@@ -357,7 +357,7 @@
     <comment>0 for blob name, 1 for snapshot time </comment>
   </data>
   <data name="ConfirmRemoveBlobWithSnapshot" xml:space="preserve">
-    <value>The blob '{0}' in container '{1}' has snapshots.</value>
+    <value>the blob '{0}' in container '{1}' with its snapshots.</value>
     <comment>0 for blob name, 1 for container name</comment>
   </data>
   <data name="RemoveBlobCancelled" xml:space="preserve">
@@ -619,5 +619,8 @@ Failed: {2}.</value>
   <data name="BlobTransmitStartSuccessfully" xml:space="preserve">
     <value>Transmission for blob '{0}' in container '{1}' started sucessfully.</value>
     <comment>0 for blob name, 1 for container name.</comment>
+  </data>
+  <data name="ConfirmCaption" xml:space="preserve">
+    <value>Confirm</value>
   </data>
 </root>

@@ -192,12 +192,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                 Record = pr
             };
 
-            Action<BlobTransferManager> taskAction = delegate(BlobTransferManager transferManager)
-            {
-                transferManager.QueueUpload(blob, filePath, OnTaskStart, OnTaskProgress, OnTaskFinish, data);
-            };
-
-            StartAsyncTaskInTransferManager(taskAction);
+            transferManager.QueueUpload(blob, filePath, OnTaskStart, OnTaskProgress, OnTaskFinish, data);
+            RunConcurrentTask(data.taskSource.Task, data.TaskId);
         }
 
         /// <summary>
@@ -263,10 +259,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="containerName">container name</param>
         /// <param name="blobName">blob name</param>
         /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
-        internal AzureStorageBlob SetAzureBlobContent(string fileName, string containerName, string blobName)
+        internal void SetAzureBlobContent(string fileName, string containerName, string blobName)
         {
             CloudBlobContainer container = Channel.GetContainerReference(containerName);
-            return SetAzureBlobContent(fileName, container, blobName);
+            SetAzureBlobContent(fileName, container, blobName);
         }
 
         /// <summary>
@@ -276,13 +272,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="container">destination container</param>
         /// <param name="blobName">blob name</param>
         /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
-        internal AzureStorageBlob SetAzureBlobContent(string fileName, CloudBlobContainer container, string blobName)
+        internal void SetAzureBlobContent(string fileName, CloudBlobContainer container, string blobName)
         {
             string filePath = GetFullSendFilePath(fileName);
 
             if (string.IsNullOrEmpty(filePath))
             {
-                return null;
+                return;
             }
 
             ValidatePipelineCloudBlobContainer(container);
@@ -306,7 +302,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                     break;
             }
 
-            return SetAzureBlobContent(fileName, blob);
+            SetAzureBlobContent(fileName, blob);
         }
 
         /// <summary>
@@ -316,13 +312,13 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="blob">destination blob</param>
         /// <param name="isValidContainer">whether the destination container is validated</param>
         /// <returns>null if user cancel the overwrite operation, otherwise return destination blob object</returns>
-        internal AzureStorageBlob SetAzureBlobContent(string fileName, ICloudBlob blob, bool isValidContainer = false)
+        internal void SetAzureBlobContent(string fileName, ICloudBlob blob, bool isValidContainer = false)
         {
             string filePath = GetFullSendFilePath(fileName);
 
             if (String.IsNullOrEmpty(filePath))
             {
-                return null;
+                return;
             }
 
             if (null == blob)
@@ -357,52 +353,33 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             //AccessCondition accessCondition = null;
             //BlobRequestOptions requestOptions = null;
             //ICloudBlob blobRef = Channel.GetBlobReferenceFromServer(blob.Container, blob.Name, accessCondition, requestOptions, OperationContext);
-            ICloudBlob blobRef = null;
-            if (null != blobRef)
-            {
-                if (blob.BlobType != blobRef.BlobType)
-                {
-                    throw new ArgumentException(String.Format(Resources.BlobTypeMismatch, blobRef.Name, blobRef.BlobType));
-                }
+            //FIXME Datamovement library will check this.
+            //ICloudBlob blobRef = null;
+            //if (null != blobRef)
+            //{
+            //    if (blob.BlobType != blobRef.BlobType)
+            //    {
+            //        throw new ArgumentException(String.Format(Resources.BlobTypeMismatch, blobRef.Name, blobRef.BlobType));
+            //    }
             
-                if (!overwrite)
-                {
-                    if (!ConfirmOverwrite(blob.Name))
-                    {
-                        return null;
-                    }
-                }
-            }
+            //    if (!overwrite)
+            //    {
+            //        if (!ConfirmOverwrite(blob.Name))
+            //        {
+            //            return null;
+            //        }
+            //    }
+            //}
 
             try
             {
                 Upload2Blob(filePath, blob);
-
-                try
-                {
-                //FXI
-                //    Channel.FetchBlobAttributes(blob, accessCondition, requestOptions, OperationContext);
-                }
-                catch (StorageException se)
-                {
-                    //Storage credentials only have the write permission, and don't have the read permission.
-                    if (se.IsNotFoundException())
-                    {
-                        WriteVerboseWithTimestamp(Resources.BlobIsNotReadable);
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
             }
             catch (Exception e)
             {
                 WriteDebugLog(String.Format(Resources.Upload2BlobFailed, e.Message));
                 throw;
             }
-
-            return new AzureStorageBlob(blob);
         }
 
         //only support the common blob properties for block blob and page blob
@@ -471,6 +448,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// </summary>
         /// <param name="azureBlob">azure storage blob object</param>
         /// <param name="meta">blob properties hashtable</param>
+        //FIXME remove
         private void SetBlobProperties(AzureStorageBlob azureBlob, Hashtable properties)
         {
             SetBlobProperties(azureBlob.ICloudBlob, properties);
@@ -524,7 +502,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// </summary>
         public override void ExecuteCmdlet()
         {
-            AzureStorageBlob blob = null;
             string containerName = string.Empty;
 
             if (BlobProperties != null)
@@ -535,35 +512,25 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             switch (ParameterSetName)
             {
                 case ContainerParameterSet:
-                    blob = SetAzureBlobContent(FileName, CloudBlobContainer, BlobName);
+                    SetAzureBlobContent(FileName, CloudBlobContainer, BlobName);
                     containerName = CloudBlobContainer.Name;
                     break;
 
                 case BlobParameterSet:
-                    blob = SetAzureBlobContent(FileName, ICloudBlob);
+                    SetAzureBlobContent(FileName, ICloudBlob);
                     containerName = ICloudBlob.Container.Name;
                     break;
 
                 case ManualParameterSet:
                 default:
-                    blob = SetAzureBlobContent(FileName, ContainerName, BlobName);
+                    SetAzureBlobContent(FileName, ContainerName, BlobName);
                     containerName = ContainerName;
                     break;
             }
 
-            if (blob == null)
-            {
-                String result = String.Format(Resources.SendAzureBlobCancelled, FileName, containerName);
-                WriteObject(result);
-            }
-            else
-            {
-                //set the properties and meta
-                SetBlobProperties(blob, BlobProperties);
-                SetBlobMeta(blob, Metadata);
-
-                WriteObjectWithStorageContext(blob);
-            }
+            //FIXME always use WriteVerboseWithTimestamp in the whole process
+            //string message = string.Empty;
+            //WriteVerboseWithTimestamp(message);
         }
 
         /// <summary>
@@ -580,8 +547,9 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                 BlobRequestOptions requestOptions = null;
 
                 Task[] tasks = new Task[3];
-                //TODO reduce the number of task
+                //TODO reduce the number of task and return immediately
                 //TODO ConfigureAwait
+                //FIXME handle the permission issues
                 tasks[0] = Channel.FetchBlobAttributesAsync(blob, accessCondition,
                     requestOptions, OperationContext, CmdletCancellationToken);
                 tasks[1] = Channel.SetBlobMetadataAsync(blob, BlobMetadata, accessCondition, requestOptions, OperationContext, CmdletCancellationToken);

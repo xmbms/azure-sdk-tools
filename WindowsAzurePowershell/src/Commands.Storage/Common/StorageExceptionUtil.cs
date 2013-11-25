@@ -33,6 +33,16 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         }
 
         /// <summary>
+        /// Whether the storage exception is 409 conflict exception
+        /// </summary>
+        /// <param name="e">StorageException from the storage client</param>
+        /// <returns>True if the storage exception is 409 conflict, otherwise false.</returns>
+        public static bool IsConflictException(this StorageException e)
+        {
+            return e.RequestInformation != null && e.RequestInformation.HttpStatusCode == 409;
+        }
+
+        /// <summary>
         /// Is the storage exception thrown with 2xx http status code
         /// </summary>
         /// <param name="e">Storage exception</param>

@@ -18,6 +18,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
     using System.Management.Automation;
     using System.Net;
     using System.Threading;
+    using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Commands.Storage.Common;
     using Microsoft.WindowsAzure.Commands.Storage.Utilities;
     using Microsoft.WindowsAzure.Management.Storage.Blob;
@@ -33,7 +34,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <summary>
         /// Blob Transfer Manager
         /// </summary>
-        private BlobTransferManager transferManager;
+        protected BlobTransferManager transferManager;
 
         /// <summary>
         /// Default task per core
@@ -85,10 +86,10 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// </summary>
         /// <param name="msg">Confirmation message</param>
         /// <returns>True if the opeation is confirmed, otherwise return false</returns>
-        internal virtual bool ConfirmOverwrite(string destinationPath)
+        internal virtual bool ConfirmOverwrite(string sourcePath, string destinationPath)
         {
             string overwriteMessage = String.Format(Resources.OverwriteConfirmation, destinationPath);
-            return overwrite || ShouldProcess(destinationPath);
+            return overwrite || ConfirmAsyc(overwriteMessage).Result;
         }
 
         /// <summary>
@@ -103,7 +104,6 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             }
 
             DataMovementUserData userData = data as DataMovementUserData;
-
             if (null == userData)
             {
                 return;
@@ -152,8 +152,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="e">run time exception</param>
         internal virtual void OnTaskFinish(object data, Exception e)
         {
-            try
-            {
+            //try
+            //{
                 if (IsCanceledOperation())
                 {
                     return;
@@ -165,15 +165,18 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
 
                 if (null == e)
                 {
-                    Interlocked.Increment(ref TaskFinishedCount);
+                    //FIXME remove
+                    //Interlocked.Increment(ref TaskFinishedCount);
                     status = Resources.TransmitSuccessfully;
                     OnTaskSuccessful(userData);
+                    userData.taskSource.SetResult(true);
                 }
                 else
                 {
-                    Interlocked.Increment(ref TaskFailedCount);
+                    //Interlocked.Increment(ref TaskFailedCount);
                     status = String.Format(Resources.TransmitFailed, e.Message);
-                    OutputStream.WriteError(userData.TaskId, e);
+                    //OutputStream.WriteError(userData.TaskId, e);
+                    userData.taskSource.SetException(e);
                 }
 
                 if (userData != null && userData.Record != null)
@@ -186,11 +189,11 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
                     userData.Record.StatusDescription = status;
                     ProgressStream.WriteStream(userData.Record);
                 }
-            }
-            finally
-            {
-                TaskCounter.Signal();
-            }
+            //}
+            //finally
+            //{
+            //    TaskCounter.Signal();
+            //}
         }
 
         /// <summary>
@@ -210,6 +213,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
             BlobTransferOptions opts = new BlobTransferOptions();
             opts.Concurrency = GetCmdletConcurrency();
             opts.AppendToClientRequestId(CmdletOperationContext.ClientRequestId);
+            opts.OverwritePromptCallback = ConfirmOverwrite;
             transferManager = new BlobTransferManager(opts);
 
             CmdletCancellationToken.Register(() => transferManager.CancelWorkAndWaitForCompletion());
@@ -220,24 +224,25 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// </summary>
         /// <param name="taskStartAction">Task  start action</param>
         /// <param name="record"></param>
-        protected void StartAsyncTaskInTransferManager(Action<BlobTransferManager> taskStartAction)
-        {
-            TaskTotalCount++;
+        //protected void StartAsyncTaskInTransferManager(Func<BlobTransferManager, Task> taskStartAction, long taskId)
+        //{
+        //    //FIXME convert to task based api and run with RunConcurrentTask
+        //    //TaskTotalCount++;
 
-            TaskCounter.AddCount();
+        //    //TaskCounter.AddCount();
 
-            try
-            {
-                taskStartAction(transferManager);
-            }
-            catch
-            {
-                TaskCounter.Signal();
-                throw;
-            }
-
-            GatherStreamToMainThread();
-        }
+        //    //try
+        //    //{
+        //    RunConcurrentTask(taskStartAction(transferManager));
+        //    //}
+        //    //catch
+        //    //{
+        //    //    TaskCounter.Signal();
+        //    //    throw;
+        //    //}
+        //FIXME Do we need to output the main stream?
+        //    GatherStreamToMainThread();
+        //}
 
         /// <summary>
         /// Dispose DataMovement cmdlet
