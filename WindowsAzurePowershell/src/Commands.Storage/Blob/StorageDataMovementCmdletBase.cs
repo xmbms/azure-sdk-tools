@@ -98,6 +98,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="progress">progress information</param>
         internal virtual void OnTaskStart(object data)
         {
+            Console.WriteLine("Start");
             if (IsCanceledOperation())
             {
                 return;
@@ -152,6 +153,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob
         /// <param name="e">run time exception</param>
         internal virtual void OnTaskFinish(object data, Exception e)
         {
+            Console.WriteLine("Task finished");
             //try
             //{
                 if (IsCanceledOperation())

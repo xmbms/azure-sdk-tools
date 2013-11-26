@@ -159,8 +159,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
             foreach (CloudBlobContainer container in containerList)
             {
                 long taskId = GetAvailableTaskId();
-                Task task = GetContainerPermission(container, taskId, Context);
-                RunConcurrentTask(task, taskId);
+                Func<Task> generator = () => GetContainerPermission(container, taskId, Context);
+                RunConcurrentTask(generator, taskId);
             }
         }
 
@@ -173,7 +173,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Blob.Cmdlet
         /// <returns></returns>
         internal async Task GetContainerPermission(CloudBlobContainer container, long taskId, AzureStorageContext context)
         {
-            BlobRequestOptions requestOptions = null;
+            BlobRequestOptions requestOptions = new BlobRequestOptions();
+            requestOptions.MaximumExecutionTime = TimeSpan.FromSeconds(5);
             AccessCondition accessCondition = null;
             BlobContainerPermissions permissions = await Channel.GetContainerPermissionsAsync(container, accessCondition,
                     requestOptions, OperationContext, CmdletCancellationToken).ConfigureAwait(false);

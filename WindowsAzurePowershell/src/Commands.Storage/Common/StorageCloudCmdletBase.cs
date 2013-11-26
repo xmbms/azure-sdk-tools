@@ -55,36 +55,8 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         }
 
         #region sync confirm to async
-        /// <summary>
-        /// The operation that should be confirmed by user.
-        /// </summary>
-        private Lazy<ConcurrentQueue<ConfirmTaskCompletionSource>> ConfirmQueue = new Lazy<ConcurrentQueue<ConfirmTaskCompletionSource>>(
-            () => new ConcurrentQueue<ConfirmTaskCompletionSource>(), true);
 
-        protected Task<bool> ConfirmAsyc(string processTarget)
-        {
-            ConfirmTaskCompletionSource tcs = new ConfirmTaskCompletionSource(processTarget);
-            ConfirmQueue.Value.Enqueue(tcs);
-            return tcs.Task;
-        }
-
-        internal void ConfirmRequest(ConfirmTaskCompletionSource tcs)
-        {
-            bool result = ShouldProcess(string.Empty, tcs.Message, Resources.ConfirmCaption);
-            tcs.SetResult(result);
-        }
-
-        protected void ConfirmQueuedRequest()
-        {
-            if (ConfirmQueue.IsValueCreated)
-            {
-                ConfirmTaskCompletionSource tcs = null;
-                while (ConfirmQueue.Value.TryDequeue(out tcs))
-                {
-                    ConfirmRequest(tcs);
-                }
-            }
-        }
+        
 
         #endregion
 
@@ -327,6 +299,14 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             }
 
             base.BeginProcessing();
+            AppDomain.CurrentDomain.UnhandledException += MyHandler;
+        }
+
+        private static void MyHandler(object sender, UnhandledExceptionEventArgs args)
+        {
+            Exception e = (Exception)args.ExceptionObject;
+            Console.WriteLine("MyHandler caught : " + e.Message);
+            Console.WriteLine("Runtime terminating: {0}", args.IsTerminating);
         }
 
         /// <summary>
@@ -440,34 +420,17 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
         /// <summary>
         /// Active task counter
         /// </summary>
+        //FIXME remove
         private CountdownEvent TaskCounter;
 
         //CountDownEvent wait time out and output time interval.
         protected const int WaitTimeout = 1000;//ms
 
-        /// <summary>
-        /// Task number counter
-        ///     The following counter should be used with Interlocked
-        /// </summary>
-        private long TaskTotalCount = 0;
-        private long TaskFailedCount = 0;
-        private long TaskFinishedCount = 0;
+        
 
-        /// <summary>
-        /// Task status
-        /// Key: Output id
-        /// Value: Task is done or not.
-        /// </summary>
-        private ConcurrentDictionary<long, bool> TaskStatus;
+        
 
-        /// <summary>
-        /// Get available task id
-        ///     thread unsafe since it should only run in main thread
-        /// </summary>
-        protected long GetAvailableTaskId()
-        {
-            return TaskTotalCount;
-        }
+        
 
         /// <summary>
         /// Get the concurrency value
@@ -497,7 +460,7 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
                 concurrency = Environment.ProcessorCount * asyncTasksPerCoreMultiplier;
             }
 
-            return concurrency;
+            return 2;
         }
 
         /// <summary>
@@ -577,46 +540,5 @@ namespace Microsoft.WindowsAzure.Commands.Storage.Common
             summaryRecord.StatusDescription = summary;
             WriteProgress(summaryRecord);
         }
-
-        /// <summary>
-        /// Run async task
-        /// </summary>
-        /// <param name="task">Task operation</param>
-        /// <param name="taskId">task id</param>
-        protected async void RunConcurrentTask(Task task, long taskId)
-        {
-            //Most Tasks do the web requests.
-            //ServicePointManager.DefaultConnectionLimit will limit the max connection.
-            //So there is no need to limit the amount of concurrent tasks.
-            //FIXME remove the description above.
-            TaskTotalCount++;
-            TaskCounter.AddCount();
-            bool initTaskStatus = false;
-            bool finishedTaskStatus = true;
-
-            try
-            {
-                TaskStatus.TryAdd(taskId, initTaskStatus);
-                //FIXME this wil cause the dead lock
-                //When limitedConcurrency = 0, the main thread will be blocked and can't responsd to user interface.
-                //Please try set-azurestorageblobcontent to reproduce.
-                //limitedConcurrency.Wait(CmdletCancellationToken);
-                await task.ConfigureAwait(false);
-                Interlocked.Increment(ref TaskFinishedCount);
-            }
-            catch (Exception e)
-            {
-                Interlocked.Increment(ref TaskFailedCount);
-                OutputStream.WriteError(taskId, e);
-            }
-            finally
-            {
-                TaskStatus.TryUpdate(taskId, finishedTaskStatus, initTaskStatus);
-                //limitedConcurrency.Release();
-                TaskCounter.Signal();
-            }
-        }
-
-        #endregion
     }
 }

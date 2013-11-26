@@ -157,6 +157,7 @@
     <Compile Include="Blob\Cmdlet\StopAzureStorageBlobCopy.cs" />
     <Compile Include="Common\CommunicationExceptionUtil.cs" />
     <Compile Include="Common\ConfirmTaskCompletionSource.cs" />
+    <Compile Include="Common\LimitedConcurrencyTaskScheduler.cs" />
     <Compile Include="Common\NameUtil.cs" />
     <Compile Include="Common\Cmdlet\NewAzureStorageContext.cs" />
     <Compile Include="Common\OrderedStreamWriter.cs" />
@@ -167,6 +168,7 @@
     <Compile Include="Blob\StorageCloudBlobCmdletBase.cs" />
     <Compile Include="Common\StorageExceptionUtil.cs" />
     <Compile Include="Common\StorageNouns.cs" />
+    <Compile Include="Common\TaskOutputStream.cs" />
     <Compile Include="Common\UnorderedStreamWriter.cs" />
     <Compile Include="Model\Contract\IStorageQueueManagement.cs" />
     <Compile Include="Model\Contract\IStorageTableManagement.cs" />
